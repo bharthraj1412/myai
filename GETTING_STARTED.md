@@ -58,8 +58,8 @@ Install these before proceeding:
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_ORG/AG3NT.git
-cd AG3NT-main
+git clone https://github.com/bharthraj1412/myai.git
+cd myai
 
 # Verify you're in the correct directory
 ls -la  # Should see: apps/, community/, skills/, package.json, etc.
@@ -202,7 +202,7 @@ source .venv/bin/activate
 
 ```bash
 # (Already in .venv from above)
-pip install -e .
+pip install -r requirements.txt
 
 # Install development dependencies (optional but recommended)
 pip install pytest pytest-asyncio black mypy
@@ -275,8 +275,8 @@ cd apps/agent
 # or
 source .venv/bin/activate  # Linux/Mac
 
-python -m ag3nt_agent.worker
-# Should show: "Agent listening on 0.0.0.0:18790"
+python -m uvicorn ag3nt_agent.worker:app --port 18790
+# Should show: "Uvicorn running on http://127.0.0.1:18790 (Press CTRL+C to quit)"
 ```
 
 **Terminal 3: Web Dashboard**
@@ -437,7 +437,7 @@ cd apps/gateway && pnpm dev         # Start gateway dev server
 cd apps/gateway && pnpm test        # Run gateway tests
 
 # Agent Worker
-cd apps/agent && source .venv/bin/activate && python -m ag3nt_agent.worker
+cd apps/agent && source .venv/bin/activate && python -m uvicorn ag3nt_agent.worker:app --port 18790
 
 # UI Dashboard
 cd apps/ui && pnpm dev              # Start UI on port 3000
@@ -472,5 +472,5 @@ rm -rf apps/agent/.venv  # Remove Python venv
 - **Architecture Questions**: See [PROJECT_ARCHITECTURE.md](PROJECT_ARCHITECTURE.md)
 - **Project Structure**: See [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md)
 - **Contributing**: See [CONTRIBUTING.md](CONTRIBUTING.md)
-- **GitHub Issues**: [Create an issue](https://github.com/YOUR_ORG/AG3NT/issues)
+- **GitHub Issues**: [Create an issue](https://github.com/bharthraj1412/myai/issues)
 
