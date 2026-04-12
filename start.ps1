@@ -510,7 +510,7 @@ if (-not $NoUI) {
     # Use npx next dev with proper port - this is more reliable than npm run dev
     $UIProcess = Start-BackgroundProcess `
         -Command "npx" `
-        -Arguments @("next", "dev", "--port", $UIPort.ToString()) `
+        -Arguments @("next", "dev", "-H", "127.0.0.1", "-p", $UIPort.ToString()) `
         -WorkingDirectory $UIDir `
         -LogFile $UILog `
         -Environment $UIEnv
@@ -711,7 +711,7 @@ try {
 
                         $UIProcess = Start-BackgroundProcess `
                             -Command "npx" `
-                            -Arguments @("next", "dev", "--port", $UIPort.ToString()) `
+                            -Arguments @("next", "dev", "-H", "127.0.0.1", "-p", $UIPort.ToString()) `
                             -WorkingDirectory $UIDir `
                             -LogFile $UILog `
                             -Environment $restartEnv

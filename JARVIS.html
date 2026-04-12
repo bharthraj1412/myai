@@ -1830,9 +1830,9 @@ function enforceSafeStartupDefaults() {
     }
 
     // Prefer running inside the local AG3NT UI to avoid file-origin fetch restrictions.
-    if (window.location.href.indexOf('http://127.0.0.1:3000/jarvis') === -1) {
+    if (window.location.href.indexOf('http://localhost:3000/jarvis') === -1 && window.location.href.indexOf('http://127.0.0.1:3000/jarvis') === -1) {
       setTimeout(() => {
-        window.location.href = 'http://127.0.0.1:3000/jarvis';
+        window.location.href = 'http://localhost:3000/jarvis';
       }, 150);
     }
   }
