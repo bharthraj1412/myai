@@ -20,6 +20,7 @@ logger = logging.getLogger("ag3nt.tools")
 # Each entry: (friendly_name, module_path, callable_name)
 TOOL_REGISTRY: list[tuple[str, str, str]] = [
     ("memory_search", "ag3nt_agent.memory_search", "get_memory_search_tool"),
+    ("memory_store", "ag3nt_agent.memory_search", "get_memory_store_tool"),
     ("memory_summarizer", "ag3nt_agent.memory_summarizer", "get_summarize_memory_tool"),
     ("node_action", "ag3nt_agent.node_action_tool", "get_node_action_tool"),
     ("skill_executor", "ag3nt_agent.skill_executor", "run_skill"),

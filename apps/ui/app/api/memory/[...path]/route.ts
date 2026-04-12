@@ -7,25 +7,35 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
-const GATEWAY_URL = process.env.NEXT_PUBLIC_GATEWAY_URL || 'http://localhost:18789';
+const GATEWAY_URL = (
+  process.env.AG3NT_GATEWAY_URL ||
+  process.env.NEXT_PUBLIC_AG3NT_GATEWAY_URL ||
+  process.env.NEXT_PUBLIC_GATEWAY_URL ||
+  'http://127.0.0.1:18789'
+).replace(/\/+$/, '');
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  { params }: { params: Promise<{ path: string[] }> }
 ) {
+  let timeout: ReturnType<typeof setTimeout> | null = null
   try {
-    const subpath = params.path.join('/');
+    const resolved = await params
+    const subpath = resolved.path.join('/');
     const gatewayUrl = `${GATEWAY_URL}/api/memory/${subpath}`;
     
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
+    timeout = setTimeout(() => controller.abort(), 5000);
     
     const response = await fetch(gatewayUrl, {
       headers: { 'Accept': 'application/json' },
       signal: controller.signal,
     });
     
-    clearTimeout(timeout);
+    if (timeout) {
+      clearTimeout(timeout)
+      timeout = null
+    }
     
     if (!response.ok) {
       return NextResponse.json(
@@ -42,5 +52,9 @@ export async function GET(
       { error: 'Gateway unavailable', fallback: true },
       { status: 503 }
     );
+  } finally {
+    if (timeout) {
+      clearTimeout(timeout)
+    }
   }
 }

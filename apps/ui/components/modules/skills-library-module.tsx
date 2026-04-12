@@ -6,17 +6,14 @@ import {
   Search,
   Grid3x3,
   List,
-  Power,
-  PowerOff,
   RefreshCw,
-  Tag,
   FileText,
   ChevronRight,
   Download,
   Globe2,
+  Layers3,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
 import {
@@ -95,9 +92,10 @@ export function SkillsLibraryModule({ instanceId, initialData }: ModuleInstanceP
   const [total, setTotal] = useState(0)
   const [isViewerFullWidth, setIsViewerFullWidth] = useState(false)
   const [activeTab, setActiveTab] = useState<"local" | "community">("local")
+  const [communityCategory, setCommunityCategory] = useState("all")
 
   // Community skills state
-  const [communityCategories, setCommunityCategories] = useState<any[]>([])
+  const [communityCategories, setCommunityCategories] = useState<Array<{ id: string; name: string; count: number }>>([])
 
   // Gateway skill toggle state
   const [gatewaySkills, setGatewaySkills] = useState<Map<string, GatewaySkill>>(new Map())
@@ -163,7 +161,7 @@ export function SkillsLibraryModule({ instanceId, initialData }: ModuleInstanceP
   )
 
   const loadSkills = useCallback(
-    async (criteria?: SkillSearchCriteria, tab: "local" | "community" = activeTab) => {
+    async (criteria?: SkillSearchCriteria, tab: "local" | "community" = activeTab, category: string = communityCategory) => {
       try {
         setIsLoading(true)
         setError(null)
@@ -174,6 +172,10 @@ export function SkillsLibraryModule({ instanceId, initialData }: ModuleInstanceP
         if (criteria?.tags?.length) params.set("tag", criteria.tags[0])
         if (criteria?.limit) params.set("limit", criteria.limit.toString())
         if (criteria?.offset) params.set("offset", criteria.offset.toString())
+
+        if (tab === "community" && category && category !== "all") {
+          params.set("category", category)
+        }
 
         const endpoint = tab === "local" ? `/api/skills/list` : `/api/skills/catalog`
         const response = await fetch(`${endpoint}?${params}`)
@@ -210,7 +212,7 @@ export function SkillsLibraryModule({ instanceId, initialData }: ModuleInstanceP
         setIsLoading(false)
       }
     },
-    [activeTab, updateContext]
+    [activeTab, communityCategory, updateContext]
   )
 
   useEffect(() => {
@@ -221,9 +223,9 @@ export function SkillsLibraryModule({ instanceId, initialData }: ModuleInstanceP
   const handleSearch = useCallback(
     (query: string) => {
       setSearchQuery(query)
-      loadSkills({ search: query })
+      loadSkills({ search: query }, activeTab, communityCategory)
     },
-    [loadSkills]
+    [activeTab, communityCategory, loadSkills]
   )
 
   const handleSelectSkill = useCallback(
@@ -236,9 +238,12 @@ export function SkillsLibraryModule({ instanceId, initialData }: ModuleInstanceP
   )
 
   const handleRefresh = useCallback(() => {
-    loadSkills({ search: searchQuery })
+    loadSkills({ search: searchQuery }, activeTab, communityCategory)
     loadGatewaySkills()
-  }, [loadSkills, loadGatewaySkills, searchQuery])
+  }, [activeTab, communityCategory, loadSkills, loadGatewaySkills, searchQuery])
+
+  const localCount = activeTab === "local" ? total : 0
+  const communityCount = activeTab === "community" ? total : 0
 
   if (isLoading && skills.length === 0) {
     return (
@@ -272,7 +277,8 @@ export function SkillsLibraryModule({ instanceId, initialData }: ModuleInstanceP
                 )}
                 onClick={() => {
                   setActiveTab("local")
-                  loadSkills({ search: searchQuery }, "local")
+                  setCommunityCategory("all")
+                  loadSkills({ search: searchQuery }, "local", "all")
                 }}
               >
                 Local Skills
@@ -286,7 +292,7 @@ export function SkillsLibraryModule({ instanceId, initialData }: ModuleInstanceP
                 )}
                 onClick={() => {
                   setActiveTab("community")
-                  loadSkills({ search: searchQuery }, "community")
+                  loadSkills({ search: searchQuery }, "community", communityCategory)
                 }}
               >
                 <Globe2 className="h-3.5 w-3.5" />
@@ -304,6 +310,24 @@ export function SkillsLibraryModule({ instanceId, initialData }: ModuleInstanceP
                   className="pl-9 h-8 w-64 bg-surface-input border-border text-sm"
                 />
               </div>
+              {activeTab === "community" && (
+                <select
+                  value={communityCategory}
+                  onChange={(e) => {
+                    const next = e.target.value
+                    setCommunityCategory(next)
+                    loadSkills({ search: searchQuery }, "community", next)
+                  }}
+                  className="h-8 rounded-md border border-border bg-surface-input px-2 text-xs text-text-primary"
+                >
+                  <option value="all">All categories</option>
+                  {communityCategories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name} ({cat.count})
+                    </option>
+                  ))}
+                </select>
+              )}
               <div className="flex items-center gap-1 rounded-lg border border-border overflow-hidden">
                 <button
                   onClick={() => setViewMode("list")}
@@ -338,6 +362,28 @@ export function SkillsLibraryModule({ instanceId, initialData }: ModuleInstanceP
               <span className="text-xs text-text-muted tabular-nums ml-1">{total} skills</span>
             </div>
           </div>
+
+          <div className="grid grid-cols-1 gap-2 px-4 pb-3 sm:grid-cols-3">
+            <div className="rounded-lg border border-border bg-[#171717] px-3 py-2">
+              <div className="text-[10px] uppercase tracking-wider text-text-muted">Source</div>
+              <div className="mt-1 text-sm font-semibold text-text-primary">
+                {activeTab === "community" ? "OpenClaw Community" : "Local Workspace"}
+              </div>
+            </div>
+            <div className="rounded-lg border border-border bg-[#171717] px-3 py-2">
+              <div className="text-[10px] uppercase tracking-wider text-text-muted">Visible</div>
+              <div className="mt-1 text-sm font-semibold text-blue-400">{total}</div>
+            </div>
+            <div className="rounded-lg border border-border bg-[#171717] px-3 py-2">
+              <div className="text-[10px] uppercase tracking-wider text-text-muted">Gateway Sync</div>
+              <div className="mt-1 flex items-center gap-2 text-sm font-semibold">
+                <Layers3 className={cn("h-4 w-4", gatewayLoading ? "animate-spin text-amber-400" : "text-emerald-400")} />
+                <span className={cn(gatewayLoading ? "text-amber-400" : "text-emerald-400")}>
+                  {gatewayLoading ? "Updating" : "Ready"}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Content area */}
@@ -358,6 +404,7 @@ export function SkillsLibraryModule({ instanceId, initialData }: ModuleInstanceP
                   onSelectSkill={handleSelectSkill}
                   gatewaySkills={gatewaySkills}
                   onToggleSkill={toggleSkill}
+                  gatewayLoading={gatewayLoading}
                 />
               ) : (
                 <SkillsGrid
@@ -366,6 +413,7 @@ export function SkillsLibraryModule({ instanceId, initialData }: ModuleInstanceP
                   onSelectSkill={handleSelectSkill}
                   gatewaySkills={gatewaySkills}
                   onToggleSkill={toggleSkill}
+                  gatewayLoading={gatewayLoading}
                 />
               )}
             </div>
@@ -402,6 +450,7 @@ interface SkillsViewProps {
   onSelectSkill: (skill: SkillMeta) => void
   gatewaySkills: Map<string, GatewaySkill>
   onToggleSkill: (id: string, enabled: boolean) => void
+  gatewayLoading: boolean
 }
 
 function SkillsList({
@@ -410,6 +459,7 @@ function SkillsList({
   onSelectSkill,
   gatewaySkills,
   onToggleSkill,
+  gatewayLoading,
 }: SkillsViewProps) {
   return (
     <div className="p-3 space-y-2">
@@ -417,12 +467,21 @@ function SkillsList({
         const gw = gatewaySkills.get(skill.id) || gatewaySkills.get(skill.name)
         const isEnabled = gw?.enabled ?? true
         return (
-          <button
+          <div
             key={skill.id}
+            role="button"
+            tabIndex={0}
             onClick={() => onSelectSkill(skill)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault()
+                onSelectSkill(skill)
+              }
+            }}
             className={cn(
-              "w-full text-left p-4 rounded-xl border transition-all group",
+              "w-full text-left p-4 rounded-xl border transition-all group cursor-pointer",
               "hover:bg-surface-elevated hover:border-border-active hover:shadow-md",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-status-info/50",
               selectedSkill?.id === skill.id
                 ? "bg-surface-elevated border-status-info ring-1 ring-status-info/20"
                 : "bg-[#1a1a1a] border-border"
@@ -482,6 +541,7 @@ function SkillsList({
                   >
                     <Switch
                       checked={isEnabled}
+                      disabled={gatewayLoading}
                       onCheckedChange={(checked) =>
                         onToggleSkill(String(gw.id), checked)
                       }
@@ -495,7 +555,7 @@ function SkillsList({
                 )}
               </div>
             </div>
-          </button>
+          </div>
         )
       })}
     </div>
@@ -512,6 +572,7 @@ function SkillsGrid({
   onSelectSkill,
   gatewaySkills,
   onToggleSkill,
+  gatewayLoading,
 }: SkillsViewProps) {
   return (
     <div className="p-4 grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -519,12 +580,21 @@ function SkillsGrid({
         const gw = gatewaySkills.get(skill.id) || gatewaySkills.get(skill.name)
         const isEnabled = gw?.enabled ?? true
         return (
-          <button
+          <div
             key={skill.id}
+            role="button"
+            tabIndex={0}
             onClick={() => onSelectSkill(skill)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault()
+                onSelectSkill(skill)
+              }
+            }}
             className={cn(
-              "text-left rounded-xl border transition-all group relative overflow-hidden",
+              "text-left rounded-xl border transition-all group relative overflow-hidden cursor-pointer",
               "hover:border-border-active hover:shadow-lg hover:-translate-y-0.5",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-status-info/50",
               selectedSkill?.id === skill.id
                 ? "bg-surface-elevated border-status-info ring-1 ring-status-info/20"
                 : "bg-[#1a1a1a] border-border hover:bg-surface-elevated"
@@ -560,6 +630,7 @@ function SkillsGrid({
                   >
                     <Switch
                       checked={isEnabled}
+                      disabled={gatewayLoading}
                       onCheckedChange={(checked) =>
                         onToggleSkill(String(gw.id), checked)
                       }
@@ -614,7 +685,7 @@ function SkillsGrid({
                 )}
               </div>
             </div>
-          </button>
+          </div>
         )
       })}
     </div>
@@ -634,6 +705,7 @@ interface SkillDocumentViewerProps {
 }
 
 function SkillDocumentViewer({ skill, onClose, onSave }: SkillDocumentViewerProps) {
+  const isCommunity = Boolean((skill as any).isCommunity)
   const truncatedDesc =
     skill.description.length > 80
       ? skill.description.slice(0, 80) + "..."
@@ -659,6 +731,7 @@ function SkillDocumentViewer({ skill, onClose, onSave }: SkillDocumentViewerProp
 
   const handleSave = useCallback(
     async (content: string): Promise<boolean> => {
+      if (isCommunity) return false
       const response = await fetch("/api/skills", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -666,7 +739,7 @@ function SkillDocumentViewer({ skill, onClose, onSave }: SkillDocumentViewerProp
       })
       return response.ok
     },
-    [skill.path]
+    [isCommunity, skill.path]
   )
 
   return (
@@ -675,9 +748,21 @@ function SkillDocumentViewer({ skill, onClose, onSave }: SkillDocumentViewerProp
       icon={Wand2}
       fetchContent={fetchContent}
       onSave={handleSave}
-      editable={true}
+      editable={!isCommunity}
       onClose={onClose}
       onSaveComplete={onSave}
+      headerContent={
+        isCommunity ? (
+          <a
+            href={skill.path}
+            target="_blank"
+            rel="noreferrer"
+            className="text-xs text-cyan-400 hover:text-cyan-300"
+          >
+            Open source page
+          </a>
+        ) : null
+      }
     />
   )
 }

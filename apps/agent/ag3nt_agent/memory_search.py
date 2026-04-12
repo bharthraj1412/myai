@@ -1015,3 +1015,89 @@ def get_memory_search_tool():
         return search_memory(query, top_k)
 
     return memory_search
+
+
+def get_memory_store_tool():
+    """Get the memory store tool for the agent.
+
+    Returns:
+        LangChain tool for storing information into memory
+    """
+    from langchain_core.tools import tool as lc_tool
+
+    @lc_tool
+    def memory_store(
+        content: str,
+        category: str = "SYSTEM",
+        title: str = "untitled",
+    ) -> dict:
+        """Store information into your persistent memory.
+
+        Use this tool to save important knowledge, learnings, user preferences,
+        or any information you want to recall later. Information is stored in
+        the MEMORY/LEARNING directory.
+
+        Args:
+            content: The information to store (markdown formatted)
+            category: Category for filing — SYSTEM, ALGORITHM, or general topic
+            title: Short title describing the knowledge (kebab-case)
+
+        Returns:
+            Confirmation of storage with file path
+        """
+        import os
+        from datetime import datetime
+        from pathlib import Path
+
+        memory_dir = Path(os.environ.get(
+            "AG3NT_MEMORY_DIR",
+            str(Path.home() / ".ag3nt" / "MEMORY"),
+        ))
+        # Also check project-level MEMORY dir
+        project_memory = Path(__file__).resolve().parents[3] / "MEMORY"
+        if project_memory.exists():
+            memory_dir = project_memory
+
+        now = datetime.now()
+        month_dir = now.strftime("%Y-%m")
+        timestamp = now.strftime("%Y-%m-%d-%H%M%S")
+
+        # Build path: MEMORY/LEARNING/{CATEGORY}/{YYYY-MM}/
+        category_upper = category.upper().replace(" ", "_")
+        target_dir = memory_dir / "LEARNING" / category_upper / month_dir
+        target_dir.mkdir(parents=True, exist_ok=True)
+
+        # Sanitize title for filename
+        safe_title = (
+            title.lower()
+            .replace(" ", "-")
+            .replace("/", "-")
+            .replace("\\", "-")
+        )[:60]
+
+        filename = f"{timestamp}_{category_upper}_{safe_title}.md"
+        filepath = target_dir / filename
+
+        # Write content with header
+        full_content = f"""# {title}
+
+**Stored:** {now.strftime('%Y-%m-%d %H:%M:%S')}
+**Category:** {category}
+
+---
+
+{content}
+"""
+        filepath.write_text(full_content, encoding="utf-8")
+
+        # Invalidate the memory index so the new content is searchable
+        reset_memory_store()
+
+        return {
+            "status": "stored",
+            "path": str(filepath),
+            "category": category_upper,
+            "title": title,
+        }
+
+    return memory_store

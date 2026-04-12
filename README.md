@@ -91,6 +91,21 @@ Access the dashboard at http://localhost:3000
 - Browser automation interface
 - System monitoring and logs
 
+## JARVIS Upgrade Pack
+
+The repository includes a powerful, standalone multi-provider assistant UI (`JARVIS.html`):
+
+- `JARVIS.html` - Production-grade standalone personal assistant UI (open directly in a browser). Now supports:
+  - **Dynamic Multi-Provider Engine**: NVIDIA (Custom), OpenRouter, Anthropic, OpenAI, and Google Gemini out of the box.
+  - **Seamless Context Switching**: Configurable easy-switch sidebar saving API keys natively to `localStorage`.
+  - **Enhanced Resiliency**: Auto-retries, connection timeout aborts, and responsive streaming.
+Recommended flow:
+
+1. Configure `.env` with your real API keys and endpoint values.
+2. Start the core AG3NT framework with `./start.ps1` (Windows) or your manual service commands.
+3. Open `JARVIS.html` in a browser for the ultimate assistant experience. Provide your endpoints (e.g. `https://integrate.api.nvidia.com/v1`) via the config pane.
+
+
 ## Quick Start
 
 ### Windows (One Command)

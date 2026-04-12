@@ -276,8 +276,9 @@ def run_skill(
 
         return output.strip() if output.strip() else f"Skill '{skill_name}' executed successfully (no output)"
 
-    except subprocess.TimeoutExpired:
-        return f"Error: Skill execution timed out after 120 seconds"
+    except subprocess.TimeoutExpired as e:
+        timeout = int(e.timeout) if isinstance(e.timeout, (int, float)) else 120
+        return f"Error: Skill execution timed out after {timeout} seconds"
     except Exception as e:
         logger.error(f"Error executing skill '{skill_name}': {e}")
         return f"Error executing skill: {str(e)}"

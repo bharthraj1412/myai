@@ -68,6 +68,24 @@ const CATEGORY_NAMES: Record<string, string> = {
 
 const SKILL_REGEX = /^-\s+\[([^\]]+)\]\((https?:\/\/[^)]+)\)\s*-\s*(.+)$/gm
 
+function findWorkspaceRoot(): string {
+  const cwd = process.cwd()
+  const candidates = [
+    cwd,
+    resolve(cwd, ".."),
+    resolve(cwd, "..", ".."),
+    resolve(cwd, "..", "..", ".."),
+  ]
+
+  for (const candidate of candidates) {
+    if (existsSync(join(candidate, "community"))) {
+      return candidate
+    }
+  }
+
+  return cwd
+}
+
 function findCatalogDir(): string | null {
   // Resolve relative to the project root
   const projectRoot = resolve(process.cwd(), "..", "..")
@@ -91,7 +109,37 @@ function parseCatalog(): { skills: SkillEntry[]; categories: CategoryInfo[] } {
 
   const catalogDir = findCatalogDir()
   if (!catalogDir) {
-    return { skills: [], categories: [] }
+    const workspaceRoot = findWorkspaceRoot()
+    const communityDir = join(workspaceRoot, "community")
+
+    if (!existsSync(communityDir)) {
+      return { skills: [], categories: [] }
+    }
+
+    const folders = readdirSync(communityDir, { withFileTypes: true })
+      .filter((d) => d.isDirectory())
+      .map((d) => d.name)
+      .sort((a, b) => a.localeCompare(b))
+
+    const fallbackSkills: SkillEntry[] = folders.map((name) => ({
+      name,
+      slug: name,
+      description: `Community integration: ${name}`,
+      category: "Community Integrations",
+      url: `https://github.com/openclaw/community/tree/main/${name}`,
+    }))
+
+    const fallbackCategories: CategoryInfo[] = [
+      {
+        id: "community-integrations",
+        name: "Community Integrations",
+        count: fallbackSkills.length,
+      },
+    ]
+
+    _cachedSkills = fallbackSkills
+    _cachedCategories = fallbackCategories
+    return { skills: fallbackSkills, categories: fallbackCategories }
   }
 
   const allSkills: SkillEntry[] = []

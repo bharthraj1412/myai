@@ -10,7 +10,7 @@ This guide walks you through setting up AG3NT for local development on Windows o
 |------------|---------|-------------|
 | **OS** | Windows 10 / Ubuntu 20.04 | Windows 11 / Ubuntu 22.04 |
 | **Node.js** | 16.x | 18.x LTS or 20.x |
-| **Python** | 3.8 | 3.10+ |
+| **Python** | 3.10 | 3.12 (Do not use 3.14+) |
 | **RAM** | 4 GB | 8+ GB |
 | **Disk Space** | 2 GB | 5+ GB |
 | **CPU Cores** | 2 | 4+ |
@@ -32,12 +32,13 @@ Install these before proceeding:
   pnpm --version  # Should be 8.x or higher
   ```
 
-#### 2. Python 3.10+
+#### 2. Python 3.10 - 3.12
 - **Download**: [python.org](https://python.org)
 - **Windows**: During installation, check **"Add Python to PATH"**
+- **Note**: Version 3.14+ is currently incompatible with underlying Pydantic/LangChain dependencies. Stick to `3.12.x`.
 - **Verify**:
   ```bash
-  python --version  # Should be 3.10 or higher
+  python --version  # Should be 3.10, 3.11, or 3.12
   ```
 
 #### 3. Git

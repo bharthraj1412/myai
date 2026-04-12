@@ -18,9 +18,9 @@ class TestBrowserTools:
     """Test suite for browser automation tools."""
 
     def test_get_browser_tools_returns_all_tools(self):
-        """Test that get_browser_tools returns all 8 tools."""
+        """Test that get_browser_tools returns the full browser tool set."""
         tools = get_browser_tools()
-        assert len(tools) == 8
+        assert len(tools) == 10
 
         tool_names = [tool.name for tool in tools]
         expected_names = [
@@ -31,6 +31,8 @@ class TestBrowserTools:
             "browser_fill",
             "browser_get_content",
             "browser_wait_for",
+            "browser_evaluate_js",
+            "browser_scroll",
             "browser_close",
         ]
 

@@ -1,0 +1,1854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AG3NT — JARVIS Personal Assistant</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Exo+2:wght@300;400;600&display=swap');
+
+  :root {
+    --c1: #00f0ff;
+    --c2: #0077ff;
+    --c3: #003355;
+    --bg: #010d1a;
+    --panel: rgba(0, 20, 40, 0.85);
+    --border: rgba(0, 240, 255, 0.2);
+    --text: #c8f0ff;
+    --muted: #4a7a99;
+    --user-msg: rgba(0, 119, 255, 0.15);
+    --ai-msg: rgba(0, 240, 255, 0.07);
+    --success: #00ff88;
+    --warning: #ffaa00;
+    --danger: #ff4466;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Exo 2', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* BACKGROUND GRID */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,240,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,240,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    top: -50%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 800px;
+    height: 800px;
+    background: radial-gradient(circle, rgba(0,119,255,0.08) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* HEADER */
+  header {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.8rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    background: rgba(1, 13, 26, 0.9);
+    backdrop-filter: blur(10px);
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .logo {
+    font-family: 'Orbitron', monospace;
+    font-weight: 900;
+    font-size: 1.3rem;
+    letter-spacing: 0.2em;
+    color: var(--c1);
+    text-shadow: 0 0 20px rgba(0,240,255,0.5);
+  }
+
+  .logo span { color: var(--c2); }
+
+  .header-status {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    flex-wrap: wrap;
+  }
+
+  .status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--c1);
+    box-shadow: 0 0 8px var(--c1);
+    animation: pulse 2s infinite;
+    flex-shrink: 0;
+  }
+
+  .status-dot.offline { background: var(--danger); box-shadow: 0 0 8px var(--danger); animation: none; }
+  .status-dot.thinking { background: var(--warning); box-shadow: 0 0 8px var(--warning); }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .badge {
+    display: inline-block;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.55rem;
+    padding: 0.15rem 0.4rem;
+    border-radius: 3px;
+    border: 1px solid;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+  }
+
+  .badge.green { border-color: var(--success); color: var(--success); }
+  .badge.yellow { border-color: var(--warning); color: var(--warning); }
+  .badge.red { border-color: var(--danger); color: var(--danger); }
+  .badge.blue { border-color: var(--c2); color: var(--c2); }
+
+  /* LAYOUT */
+  .layout {
+    position: relative;
+    z-index: 5;
+    display: grid;
+    grid-template-columns: 310px 1fr;
+    height: calc(100vh - 53px);
+  }
+
+  @media (max-width: 768px) {
+    .layout { grid-template-columns: 1fr; }
+    .sidebar { display: none; position: fixed; left: 0; top: 53px; bottom: 0; width: 310px; z-index: 100; }
+    .sidebar.open { display: flex; }
+    .mobile-toggle { display: flex !important; }
+  }
+
+  .mobile-toggle {
+    display: none;
+    width: 36px; height: 36px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--c1);
+    font-size: 1.2rem;
+    border-radius: 4px;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    background: var(--panel);
+    backdrop-filter: blur(10px);
+    overflow-y: auto;
+  }
+
+  .sidebar::-webkit-scrollbar { width: 4px; }
+  .sidebar::-webkit-scrollbar-track { background: transparent; }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .section {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    color: var(--c1);
+    margin-bottom: 0.8rem;
+    text-transform: uppercase;
+  }
+
+  /* FORM CONTROLS */
+  input[type="password"], input[type="text"], input[type="url"], select, textarea {
+    width: 100%;
+    background: rgba(0,240,255,0.04);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.5rem 0.7rem;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.72rem;
+    border-radius: 4px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--c1);
+    box-shadow: 0 0 10px rgba(0,240,255,0.1);
+  }
+
+  select option { background: #010d1a; }
+
+  .field-label {
+    font-size: 0.62rem;
+    color: var(--muted);
+    margin-bottom: 0.3rem;
+    font-family: 'Share Tech Mono', monospace;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .field-wrap { margin-bottom: 0.7rem; }
+
+  .field-hint {
+    font-size: 0.55rem;
+    color: var(--muted);
+    margin-top: 0.2rem;
+    font-family: 'Share Tech Mono', monospace;
+    opacity: 0.7;
+  }
+
+  .btn {
+    background: transparent;
+    border: 1px solid var(--c1);
+    color: var(--c1);
+    padding: 0.45rem 1rem;
+    font-family: 'Orbitron', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: 100%;
+    text-transform: uppercase;
+  }
+
+  .btn:hover { background: rgba(0,240,255,0.1); box-shadow: 0 0 15px rgba(0,240,255,0.2); }
+  .btn:active { transform: scale(0.98); }
+  .btn.danger { border-color: var(--danger); color: var(--danger); }
+  .btn.danger:hover { background: rgba(255,68,102,0.1); }
+  .btn.active-btn { background: rgba(0,240,255,0.15); }
+  .btn.success { border-color: var(--success); color: var(--success); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .btn-row { display: flex; gap: 0.5rem; }
+  .btn-row .btn { flex: 1; }
+
+  /* PROVIDER PROFILE TAGS */
+  .profile-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin-bottom: 0.7rem;
+  }
+
+  .profile-tag {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.55rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 3px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .profile-tag:hover { border-color: var(--c1); color: var(--c1); }
+  .profile-tag.active { border-color: var(--c1); color: var(--c1); background: rgba(0,240,255,0.1); }
+
+  /* PROJECT MAP */
+  .proj-tree { font-family: 'Share Tech Mono', monospace; font-size: 0.62rem; line-height: 1.8; color: var(--muted); }
+  .proj-tree .node { color: var(--c1); }
+  .proj-tree .leaf { color: var(--text); }
+
+  /* MAIN AREA */
+  .main {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    min-width: 0;
+  }
+
+  /* ORB VISUALIZER */
+  .visualizer-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border);
+    background: rgba(0,5,15,0.5);
+    position: relative;
+    min-height: 200px;
+  }
+
+  .orb-container {
+    position: relative;
+    width: 130px;
+    height: 130px;
+    cursor: pointer;
+  }
+
+  .ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 1px solid transparent;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    animation: spin linear infinite;
+  }
+
+  .ring1 { width: 130px; height: 130px; border-top-color: var(--c1); border-right-color: rgba(0,240,255,0.3); animation-duration: 4s; }
+  .ring2 { width: 100px; height: 100px; border-left-color: var(--c2); border-bottom-color: rgba(0,119,255,0.3); animation-duration: 3s; animation-direction: reverse; }
+  .ring3 { width: 70px; height: 70px; border-top-color: rgba(0,240,255,0.6); animation-duration: 2s; }
+
+  @keyframes spin { from{transform: translate(-50%,-50%) rotate(0deg)} to{transform: translate(-50%,-50%) rotate(360deg)} }
+
+  .orb-core {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 46px; height: 46px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0,240,255,0.3), rgba(0,119,255,0.1));
+    border: 1px solid rgba(0,240,255,0.4);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Orbitron', monospace;
+    font-size: 0.5rem;
+    color: var(--c1);
+    transition: all 0.3s;
+    box-shadow: 0 0 20px rgba(0,240,255,0.2);
+    text-align: center;
+    line-height: 1.2;
+  }
+
+  .orb-core:hover { box-shadow: 0 0 30px rgba(0,240,255,0.4); }
+  .orb-core.listening { background: radial-gradient(circle, rgba(255,68,102,0.3), rgba(255,68,102,0.1)); border-color: var(--danger); color: var(--danger); box-shadow: 0 0 30px rgba(255,68,102,0.3); }
+  .orb-core.thinking { background: radial-gradient(circle, rgba(255,170,0,0.3), rgba(255,170,0,0.1)); border-color: var(--warning); color: var(--warning); box-shadow: 0 0 30px rgba(255,170,0,0.3); }
+
+  .state-label {
+    margin-top: 0.8rem;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.62rem;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    text-align: center;
+  }
+
+  .interim-text {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.68rem;
+    color: rgba(0,240,255,0.6);
+    margin-top: 0.3rem;
+    min-height: 1rem;
+    text-align: center;
+    max-width: 400px;
+    font-style: italic;
+  }
+
+  .request-meta {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.55rem;
+    color: var(--muted);
+    margin-top: 0.4rem;
+    text-align: center;
+    opacity: 0.6;
+  }
+
+  /* CHAT */
+  .chat-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    scroll-behavior: smooth;
+  }
+
+  .chat-area::-webkit-scrollbar { width: 4px; }
+  .chat-area::-webkit-scrollbar-track { background: transparent; }
+  .chat-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .msg {
+    max-width: 88%;
+    padding: 0.8rem 1rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    line-height: 1.65;
+    animation: fadeIn 0.3s ease;
+    word-break: break-word;
+  }
+
+  @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+
+  .msg.user {
+    align-self: flex-end;
+    background: var(--user-msg);
+    border: 1px solid rgba(0,119,255,0.3);
+    border-radius: 6px 6px 2px 6px;
+  }
+
+  .msg.ai {
+    align-self: flex-start;
+    background: var(--ai-msg);
+    border: 1px solid var(--border);
+    border-radius: 2px 6px 6px 6px;
+  }
+
+  .msg.system {
+    align-self: center;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.05em;
+    border-radius: 4px;
+    padding: 0.4rem 0.8rem;
+  }
+
+  .msg-label {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.52rem;
+    letter-spacing: 0.15em;
+    color: var(--c1);
+    margin-bottom: 0.4rem;
+    text-transform: uppercase;
+  }
+
+  .msg.user .msg-label { color: var(--c2); }
+
+  .msg pre {
+    background: rgba(0,240,255,0.04);
+    border: 1px solid rgba(0,240,255,0.15);
+    border-radius: 4px;
+    padding: 0.7rem;
+    overflow-x: auto;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.72rem;
+    line-height: 1.5;
+    margin: 0.5rem 0;
+    color: #c8f0ff;
+  }
+
+  .msg code {
+    background: rgba(0,240,255,0.08);
+    padding: 0.1rem 0.3rem;
+    border-radius: 3px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.8em;
+    color: var(--c1);
+  }
+
+  .msg pre code {
+    background: none;
+    padding: 0;
+    color: inherit;
+  }
+
+  .cursor { display: inline-block; width: 7px; height: 1em; background: var(--c1); animation: blink 0.7s infinite; vertical-align: text-bottom; margin-left: 2px; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  /* INPUT BAR */
+  .input-bar {
+    padding: 0.8rem 1.2rem;
+    border-top: 1px solid var(--border);
+    background: rgba(0,5,15,0.7);
+    backdrop-filter: blur(10px);
+    display: flex;
+    gap: 0.6rem;
+    align-items: flex-end;
+  }
+
+  .input-bar textarea {
+    flex: 1;
+    resize: none;
+    min-height: 42px;
+    max-height: 120px;
+    padding: 0.6rem 0.8rem;
+    font-size: 0.85rem;
+    font-family: 'Exo 2', sans-serif;
+    line-height: 1.5;
+    border-radius: 6px;
+  }
+
+  .mic-btn, .send-btn {
+    height: 42px;
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .mic-btn {
+    width: 42px;
+    border-radius: 50%;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 1.1rem;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .mic-btn:hover { border-color: var(--c1); color: var(--c1); }
+  .mic-btn.active { border-color: var(--danger); color: var(--danger); box-shadow: 0 0 15px rgba(255,68,102,0.3); animation: pulse 1s infinite; }
+
+  .send-btn {
+    padding: 0 1.2rem;
+    border-radius: 6px;
+    background: rgba(0,119,255,0.15);
+    border: 1px solid var(--c2);
+    color: var(--c1);
+    font-family: 'Orbitron', monospace;
+    font-size: 0.58rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .send-btn:hover { background: rgba(0,119,255,0.3); box-shadow: 0 0 15px rgba(0,119,255,0.2); }
+  .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* QUICK COMMANDS */
+  .quick-cmds {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    padding: 0 1.2rem 0.6rem;
+    background: rgba(0,5,15,0.7);
+  }
+
+  .qcmd {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.58rem;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    padding: 0.2rem 0.5rem;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .qcmd:hover { color: var(--c1); border-color: var(--c1); }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 1.5rem; right: 1.5rem;
+    background: rgba(0,20,40,0.95);
+    border: 1px solid var(--c1);
+    color: var(--c1);
+    padding: 0.6rem 1rem;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    border-radius: 4px;
+    z-index: 9999;
+    animation: slideIn 0.3s ease;
+    max-width: 350px;
+    backdrop-filter: blur(10px);
+  }
+
+  .toast.err { border-color: var(--danger); color: var(--danger); }
+  @keyframes slideIn { from{transform:translateX(20px);opacity:0} to{transform:translateX(0);opacity:1} }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* HIDDEN utility */
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<header>
+  <button class="mobile-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">☰</button>
+  <div class="logo">AG3NT <span>//</span> JARVIS</div>
+  <div class="header-status">
+    <div class="status-indicator">
+      <div id="statusDot" class="status-dot offline"></div>
+      <span id="statusText" style="font-size:0.63rem">OFFLINE — SET API KEY</span>
+    </div>
+    <span id="providerBadge" class="badge blue">NO PROVIDER</span>
+    <span id="modelBadge" class="badge yellow" style="display:none"></span>
+    <span id="voiceBadge" class="badge green" style="display:none">VOICE</span>
+  </div>
+</header>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+
+    <!-- PROVIDER & API CONFIG -->
+    <div class="section">
+      <div class="section-title">⚙ Provider Configuration</div>
+
+      <!-- Provider quick-switch tags -->
+      <div class="field-label">QUICK SWITCH</div>
+      <div class="profile-tags" id="providerTags">
+        <div class="profile-tag" data-provider="gateway" onclick="switchProvider('gateway')">AG3NT Gateway</div>
+        <div class="profile-tag" data-provider="custom" onclick="switchProvider('custom')">Custom/NVIDIA</div>
+        <div class="profile-tag" data-provider="openrouter" onclick="switchProvider('openrouter')">OpenRouter</div>
+        <div class="profile-tag" data-provider="anthropic" onclick="switchProvider('anthropic')">Anthropic</div>
+        <div class="profile-tag" data-provider="openai" onclick="switchProvider('openai')">OpenAI</div>
+        <div class="profile-tag" data-provider="google" onclick="switchProvider('google')">Google</div>
+      </div>
+
+      <div class="field-wrap">
+        <div class="field-label">API PROVIDER</div>
+        <select id="providerSelect" onchange="onProviderChange()">
+          <option value="gateway">AG3NT Gateway (Local)</option>
+          <option value="custom">Custom (OpenAI-Compatible)</option>
+          <option value="openrouter">OpenRouter</option>
+          <option value="anthropic">Anthropic</option>
+          <option value="openai">OpenAI</option>
+          <option value="google">Google Gemini</option>
+        </select>
+      </div>
+
+      <div class="field-wrap" id="baseUrlWrap">
+        <div class="field-label">BASE URL</div>
+        <input type="url" id="baseUrl" placeholder="https://integrate.api.nvidia.com/v1" />
+        <div class="field-hint">OpenAI-compatible endpoint URL</div>
+      </div>
+
+      <div class="field-wrap">
+        <div class="field-label">API KEY</div>
+        <input type="password" id="apiKey" placeholder="Enter your API key" />
+        <div class="field-hint" id="keyHint">Any valid API key for your provider</div>
+      </div>
+
+      <div class="field-wrap">
+        <div class="field-label">MODEL</div>
+        <select id="modelSelect"></select>
+        <div class="field-hint">Or type a custom model name below ↓</div>
+      </div>
+
+      <div class="field-wrap">
+        <div class="field-label">CUSTOM MODEL NAME (optional)</div>
+        <input type="text" id="customModel" placeholder="e.g. qwen/qwen3-coder-480b-a35b-instruct" />
+      </div>
+
+      <div class="field-wrap">
+        <div class="field-label">MAX TOKENS</div>
+        <input type="text" id="maxTokens" value="4096" />
+      </div>
+
+      <div class="field-wrap">
+        <div class="field-label">TEMPERATURE</div>
+        <input type="number" id="temperature" min="0" max="2" step="0.1" value="1" />
+      </div>
+
+      <div class="field-wrap">
+        <div class="field-label">TOP P</div>
+        <input type="number" id="topP" min="0" max="1" step="0.05" value="1" />
+      </div>
+
+      <div class="field-wrap">
+        <div class="field-label">PERSONA MODE</div>
+        <select id="personaSelect">
+          <option value="jarvis">JARVIS — Full Control</option>
+          <option value="dev">AG3NT Developer Mode</option>
+          <option value="analyst">Project Analyst</option>
+          <option value="creative">Creative Writer</option>
+          <option value="minimal">Minimal — No System Prompt</option>
+        </select>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn" onclick="saveConfig()">▶ INITIALIZE</button>
+        <button class="btn success" onclick="testConnection()">⚡ TEST</button>
+      </div>
+    </div>
+
+    <!-- VOICE CONTROLS -->
+    <div class="section">
+      <div class="section-title">🎙 Voice Interface</div>
+      <div class="field-wrap">
+        <div class="field-label">VOICE OUTPUT</div>
+        <select id="voiceSelect" style="font-size:0.65rem"></select>
+      </div>
+      <div class="field-wrap">
+        <div class="field-label">SPEECH RATE</div>
+        <input type="range" id="speechRate" min="0.6" max="1.6" step="0.1" value="0.9" style="width:100%;margin-top:0.2rem" />
+        <span style="font-size:0.6rem;color:var(--muted);font-family:monospace" id="rateLabel">0.9x</span>
+      </div>
+      <div class="btn-row">
+        <button class="btn" onclick="toggleVoiceOutput()" id="voiceOutBtn">🔊 VOICE ON</button>
+        <button class="btn" onclick="testVoice()">TEST</button>
+      </div>
+    </div>
+
+    <!-- AG3NT STACK STATUS -->
+    <div class="section">
+      <div class="section-title">🖥 AG3NT Stack</div>
+      <div style="font-family:'Share Tech Mono',monospace;font-size:0.62rem;line-height:2;color:var(--muted)">
+        <div>Gateway  <span id="gwStatus" class="badge red" style="font-size:0.5rem">OFFLINE</span> <span style="color:var(--c1)">:18789</span></div>
+        <div>Agent    <span id="agStatus" class="badge red" style="font-size:0.5rem">OFFLINE</span> <span style="color:var(--c1)">:18790</span></div>
+        <div>UI       <span id="uiStatus" class="badge red" style="font-size:0.5rem">OFFLINE</span> <span style="color:var(--c1)">:3000</span></div>
+      </div>
+      <button class="btn" style="margin-top:0.5rem" onclick="checkAG3NTStack()">🔄 CHECK STACK</button>
+      <button class="btn" style="margin-top:0.4rem" onclick="openGatewaySettings()">⚙ OPEN SETTINGS</button>
+    </div>
+
+    <div class="section">
+      <button class="btn danger" onclick="clearChat()">⊘ CLEAR CONVERSATION</button>
+      <button class="btn danger" style="margin-top:0.4rem" onclick="clearSavedConfig()">✕ CLEAR SAVED CONFIG</button>
+    </div>
+
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main">
+
+    <!-- ORB VISUALIZER -->
+    <div class="visualizer-wrap">
+      <div class="orb-container" onclick="toggleListening()" title="Click to talk">
+        <div class="ring ring1" id="ring1"></div>
+        <div class="ring ring2" id="ring2"></div>
+        <div class="ring ring3" id="ring3"></div>
+        <div class="orb-core" id="orbCore">JAR<br>VIS</div>
+      </div>
+      <div class="state-label" id="stateLabel">CLICK ORB OR TYPE BELOW</div>
+      <div class="interim-text" id="interimText"></div>
+      <div class="request-meta" id="requestMeta"></div>
+    </div>
+
+    <!-- CHAT AREA -->
+    <div class="chat-area" id="chatArea">
+      <div class="msg system">
+        ▸ AG3NT JARVIS — MULTI-PROVIDER AI INTERFACE — AWAITING INITIALIZATION
+      </div>
+    </div>
+
+    <!-- QUICK COMMANDS -->
+    <div class="quick-cmds" id="quickCmds">
+      <div class="qcmd" onclick="quickSend('What is the status of my AG3NT project?')">Project Status</div>
+      <div class="qcmd" onclick="quickSend('Give me the correct .env configuration for my setup')">Fix .env</div>
+      <div class="qcmd" onclick="quickSend('How do I start the full AG3NT stack on Windows?')">Start Stack</div>
+      <div class="qcmd" onclick="quickSend('What are the known failure points and fixes?')">Troubleshoot</div>
+      <div class="qcmd" onclick="quickSend('Explain the 7-phase Algorithm Engine')">Algorithm</div>
+      <div class="qcmd" onclick="quickSend('Write a Python hello world')">Test Code</div>
+    </div>
+
+    <!-- INPUT BAR -->
+    <div class="input-bar">
+      <textarea
+        id="userInput"
+        placeholder="Type here... (Enter to send, Shift+Enter for newline)"
+        rows="1"
+        onkeydown="handleKey(event)"
+        oninput="autoResize(this)"
+      ></textarea>
+      <button class="mic-btn" id="micBtn" onclick="toggleListening()" title="Voice Input">🎙</button>
+      <button class="send-btn" id="sendBtn" onclick="sendMessage()">SEND ▶</button>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// ============================================================
+// AG3NT JARVIS — MULTI-PROVIDER AI ASSISTANT
+// Rebuilt for production with provider-agnostic architecture
+// ============================================================
+
+// ─── PROVIDER CONFIGURATIONS ────────────────────────────────
+
+const PROVIDERS = {
+  gateway: {
+    name: 'AG3NT Gateway',
+    needsBaseUrl: true,
+    defaultBaseUrl: 'http://127.0.0.1:18789',
+    keyPlaceholder: 'Optional (only if AG3NT_API_KEY is set)',
+    keyHint: 'Uses local gateway /api/chat endpoint to avoid browser CORS/provider issues',
+    models: [
+      { value: 'ag3nt-local', label: 'AG3NT Local Router' },
+    ],
+    format: 'ag3nt',
+  },
+  custom: {
+    name: 'Custom (OpenAI-Compatible)',
+    needsBaseUrl: true,
+    defaultBaseUrl: 'https://integrate.api.nvidia.com/v1',
+    keyPlaceholder: 'nvapi-... or your API key',
+    keyHint: 'API key for your custom endpoint',
+    models: [
+      { value: 'openai/gpt-oss-120b', label: 'GPT OSS 120B (NVIDIA)' },
+      { value: 'qwen/qwen3-coder-480b-a35b-instruct', label: 'Qwen3 Coder 480B (NVIDIA)' },
+      { value: 'meta/llama-3.3-70b-instruct', label: 'Llama 3.3 70B' },
+      { value: 'deepseek-ai/deepseek-r1', label: 'DeepSeek R1' },
+      { value: 'nvidia/llama-3.1-nemotron-ultra-253b-v1', label: 'Nemotron Ultra 253B' },
+      { value: 'mistralai/mistral-large-2-instruct', label: 'Mistral Large 2' },
+    ],
+    format: 'openai',
+  },
+  openrouter: {
+    name: 'OpenRouter',
+    needsBaseUrl: false,
+    baseUrl: 'https://openrouter.ai/api/v1',
+    keyPlaceholder: 'sk-or-...',
+    keyHint: 'Get key from openrouter.ai/keys',
+    models: [
+      { value: 'moonshotai/kimi-k2.5', label: 'Kimi K2.5 (Free Tier)' },
+      { value: 'anthropic/claude-sonnet-4-20250514', label: 'Claude Sonnet 4' },
+      { value: 'openai/gpt-4o', label: 'GPT-4o' },
+      { value: 'google/gemini-2.5-pro-preview', label: 'Gemini 2.5 Pro' },
+      { value: 'deepseek/deepseek-r1', label: 'DeepSeek R1' },
+      { value: 'meta-llama/llama-4-maverick', label: 'Llama 4 Maverick' },
+      { value: 'qwen/qwen3-coder-480b-a35b-instruct', label: 'Qwen3 Coder 480B' },
+    ],
+    format: 'openai',
+    extraHeaders: { 'HTTP-Referer': 'https://github.com/ag3nt', 'X-Title': 'AG3NT JARVIS' },
+  },
+  anthropic: {
+    name: 'Anthropic',
+    needsBaseUrl: false,
+    baseUrl: 'https://api.anthropic.com',
+    keyPlaceholder: 'sk-ant-api03-...',
+    keyHint: 'Get key from console.anthropic.com',
+    models: [
+      { value: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4 (Recommended)' },
+      { value: 'claude-opus-4-20250514', label: 'Claude Opus 4 (Powerful)' },
+      { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5 (Fast)' },
+    ],
+    format: 'anthropic',
+  },
+  openai: {
+    name: 'OpenAI',
+    needsBaseUrl: false,
+    baseUrl: 'https://api.openai.com/v1',
+    keyPlaceholder: 'sk-...',
+    keyHint: 'Get key from platform.openai.com',
+    models: [
+      { value: 'gpt-4o', label: 'GPT-4o (Recommended)' },
+      { value: 'gpt-4o-mini', label: 'GPT-4o Mini (Fast)' },
+      { value: 'o3', label: 'o3 (Reasoning)' },
+      { value: 'o4-mini', label: 'o4 Mini (Reasoning)' },
+    ],
+    format: 'openai',
+  },
+  google: {
+    name: 'Google Gemini',
+    needsBaseUrl: false,
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+    keyPlaceholder: 'AIzaSy...',
+    keyHint: 'Get key from aistudio.google.com',
+    models: [
+      { value: 'gemini-2.5-pro-preview-05-06', label: 'Gemini 2.5 Pro' },
+      { value: 'gemini-2.5-flash-preview-05-20', label: 'Gemini 2.5 Flash (Fast)' },
+      { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
+    ],
+    format: 'google',
+  },
+};
+
+// ─── SYSTEM PROMPT ──────────────────────────────────────────
+
+const SYSTEM_PROMPTS = {
+  jarvis: `You are JARVIS — an advanced personal AI assistant integrated directly into the AG3NT / myai system. You are the user's primary interface for controlling, debugging, understanding, and evolving their personal AI infrastructure.
+
+FULL PROJECT KNOWLEDGE — myai / AG3NT:
+
+ARCHITECTURE:
+- Monorepo with 4 apps: gateway (TypeScript, port 18789), agent (Python, port 18790), ui (Next.js, port 3000), tui (terminal/voice)
+- 7-Phase Algorithm Engine: Observe → Think → Plan → Build → Execute → Verify → Learn
+- Persistent memory: WORK, LEARNING, RESEARCH, SECURITY, STATE (in /MEMORY directory)
+- TELOS goal alignment system under USER/TELOS/
+- Multi-model support: Anthropic, OpenAI, OpenRouter, Kimi, Google, Groq, custom endpoints
+- Skills framework in /skills/ + community integrations in /community/
+
+KEY FILES:
+- apps/agent/ag3nt_agent/worker.py — Main agent runtime
+- apps/agent/ag3nt_agent/deepagents_runtime.py — DeepAgents graph
+- apps/agent/ag3nt_agent/model_config.py — Model configuration
+- apps/gateway/src/gateway/createGateway.ts — Gateway core
+- config/settings.json — Central configuration
+
+YOUR BEHAVIOR:
+- Direct, precise, and technical. Speak like Tony Stark's JARVIS — efficient, intelligent, with dry wit.
+- Give actionable answers referencing exact files and commands.
+- When speaking (voice output), be concise — no markdown, plain speech.
+- When answering in text, use markdown for structure.
+- Always tell the user what to do next.`,
+
+  dev: `You are AG3NT in Developer Mode. You are a senior full-stack engineer specializing in TypeScript, Python, React, Node.js, and AI/ML systems. You help debug, architect, and optimize codebases. Be precise, show code, explain trade-offs.`,
+
+  analyst: `You are AG3NT in Analyst Mode. You review architecture, identify improvements, surface technical debt, and recommend optimizations. Be structured, use tables and comparisons.`,
+
+  creative: `You are a creative AI assistant. You help with writing, brainstorming, storytelling, and creative projects. Be imaginative, expressive, and supportive.`,
+
+  minimal: '',
+};
+
+// ─── STATE ──────────────────────────────────────────────────
+
+let state = {
+  provider: 'gateway',
+  baseUrl: 'http://127.0.0.1:18789',
+  apiKey: '',
+  model: 'qwen/qwen3-coder-480b-a35b-instruct',
+  maxTokens: 4096,
+  temperature: 1,
+  topP: 1,
+  persona: 'jarvis',
+  messages: [],
+  sessionId: null,
+  isThinking: false,
+  isListening: false,
+  voiceEnabled: true,
+  initialized: false,
+  abortController: null,
+};
+
+let recognition = null;
+let speechRate = 0.9;
+let selectedVoice = null;
+
+// ─── DOM REFERENCES ─────────────────────────────────────────
+
+const $ = id => document.getElementById(id);
+const chatArea = $('chatArea');
+const userInput = $('userInput');
+const sendBtn = $('sendBtn');
+const micBtn = $('micBtn');
+const orbCore = $('orbCore');
+const stateLabel = $('stateLabel');
+const interimText = $('interimText');
+const requestMeta = $('requestMeta');
+const statusDot = $('statusDot');
+const statusText = $('statusText');
+const ring1 = $('ring1');
+
+// ─── PROVIDER ADAPTER ENGINE ────────────────────────────────
+
+function getProviderConfig() {
+  return PROVIDERS[state.provider] || PROVIDERS.custom;
+}
+
+function getBaseUrl() {
+  const cfg = getProviderConfig();
+  if (cfg.needsBaseUrl) return state.baseUrl || cfg.defaultBaseUrl;
+  return cfg.baseUrl;
+}
+
+function getModel() {
+  const custom = $('customModel').value.trim();
+  return custom || state.model;
+}
+
+function getGatewayBaseUrl() {
+  const cfg = getProviderConfig();
+  if (cfg.format === 'ag3nt') {
+    return (getBaseUrl() || cfg.defaultBaseUrl || 'http://127.0.0.1:18789').replace(/\/$/, '');
+  }
+  return 'http://127.0.0.1:18789';
+}
+
+function buildApiRequest(messages, stream = true) {
+  const cfg = getProviderConfig();
+  const model = getModel();
+  const systemPrompt = SYSTEM_PROMPTS[state.persona] || '';
+  const maxTokens = parseInt($('maxTokens').value) || 4096;
+  const parsedTemp = parseFloat($('temperature').value);
+  const parsedTopP = parseFloat($('topP').value);
+  const temperature = Number.isFinite(parsedTemp) ? parsedTemp : 1;
+  const topP = Number.isFinite(parsedTopP) ? parsedTopP : 1;
+
+  if (cfg.format === 'ag3nt') {
+    const latestUser = [...messages].reverse().find((msg) => msg.role === 'user');
+    const gatewayBase = (getBaseUrl() || cfg.defaultBaseUrl || '').replace(/\/$/, '');
+    return {
+      url: `${gatewayBase}/api/chat${stream ? '/stream' : ''}`,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(state.apiKey ? { 'X-API-Key': state.apiKey } : {}),
+      },
+      body: {
+        text: latestUser?.content || '',
+        session_id: state.sessionId || undefined,
+        metadata: {
+          source: 'jarvis-html',
+          persona: state.persona,
+          requestedModel: model,
+          temperature,
+          top_p: topP,
+          max_tokens: maxTokens,
+        },
+      },
+    };
+  }
+
+  if (cfg.format === 'anthropic') {
+    return {
+      url: `${getBaseUrl()}/v1/messages`,
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': state.apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: {
+        model,
+        max_tokens: maxTokens,
+        system: systemPrompt,
+        messages,
+        stream,
+        temperature,
+      },
+    };
+  }
+
+  if (cfg.format === 'google') {
+    // Google Gemini uses a different format
+    const contents = [];
+    if (systemPrompt) {
+      contents.push({ role: 'user', parts: [{ text: `[System Instructions]\n${systemPrompt}\n\n[End System Instructions]\n\nAcknowledge that you understand your role.` }] });
+      contents.push({ role: 'model', parts: [{ text: 'Understood. I am ready.' }] });
+    }
+    for (const msg of messages) {
+      contents.push({
+        role: msg.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: msg.content }],
+      });
+    }
+    const action = stream ? 'streamGenerateContent' : 'generateContent';
+    return {
+      url: `${getBaseUrl()}/models/${model}:${action}?alt=sse&key=${state.apiKey}`,
+      headers: { 'Content-Type': 'application/json' },
+      body: {
+        contents,
+        generationConfig: { maxOutputTokens: maxTokens, temperature, topP },
+      },
+    };
+  }
+
+  // OpenAI-compatible format (custom, openrouter, openai)
+  const allMessages = [];
+  if (systemPrompt) allMessages.push({ role: 'system', content: systemPrompt });
+  allMessages.push(...messages);
+
+  const headers = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${state.apiKey}`,
+    ...(cfg.extraHeaders || {}),
+  };
+
+  return {
+    url: `${getBaseUrl()}/chat/completions`,
+    headers,
+    body: {
+      model,
+      messages: allMessages,
+      max_tokens: maxTokens,
+      stream,
+      temperature,
+      top_p: topP,
+    },
+  };
+}
+
+// ─── STREAM PARSER ──────────────────────────────────────────
+
+async function* parseStream(response, format) {
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed === 'data: [DONE]') continue;
+        if (!trimmed.startsWith('data: ')) continue;
+
+        let json;
+        try {
+          json = JSON.parse(trimmed.slice(6));
+        } catch {
+          continue;
+        }
+
+        if (format === 'ag3nt') {
+          if (json.type === 'chunk' && json.content) {
+            yield { text: json.content, usage: null, sessionId: json.session_id || null };
+          } else if (json.type === 'complete') {
+            yield {
+              text: '',
+              usage: null,
+              sessionId: json.session_id || null,
+              pairingRequired: Boolean(json.pairingRequired),
+              pairingCode: json.pairingCode || null,
+            };
+          } else if (json.type === 'error') {
+            yield { error: json.error || 'Gateway stream error', sessionId: json.session_id || null };
+          }
+        } else if (format === 'anthropic') {
+          if (json.type === 'content_block_delta' && json.delta?.text) {
+            yield { text: json.delta.text, usage: null };
+          } else if (json.type === 'message_delta' && json.usage) {
+            yield { text: '', usage: json.usage };
+          }
+        } else if (format === 'google') {
+          const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (text) yield { text, usage: null };
+        } else {
+          // OpenAI format
+          const delta = json.choices?.[0]?.delta;
+          if (delta?.content) yield { text: delta.content, usage: null };
+          if (json.usage) yield { text: '', usage: json.usage };
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
+
+// ─── CONNECTION STABILITY ───────────────────────────────────
+
+async function fetchWithRetry(url, options, maxRetries = 2) {
+  let lastError;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      // Abort controller for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
+
+      state.abortController = controller;
+
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errBody = await response.text();
+        let errMsg;
+        try {
+          const parsed = JSON.parse(errBody);
+          errMsg = parsed.error?.message || parsed.message || parsed.detail || errBody;
+        } catch {
+          errMsg = errBody;
+        }
+        throw new Error(`API ${response.status}: ${errMsg}`);
+      }
+
+      return response;
+    } catch (err) {
+      lastError = err;
+
+      if (err.name === 'AbortError') {
+        throw new Error('Request timed out (60s). Check your API endpoint and network.');
+      }
+
+      // Don't retry on auth errors
+      if (err.message.includes('401') || err.message.includes('403')) throw err;
+
+      if (attempt < maxRetries) {
+        const delay = Math.pow(2, attempt) * 1000; // Exponential backoff
+        stateLabel.textContent = `RETRY ${attempt + 1}/${maxRetries} in ${delay/1000}s...`;
+        await new Promise(r => setTimeout(r, delay));
+      }
+    }
+  }
+
+  throw lastError;
+}
+
+function isPlaceholderKey(key) {
+  const value = (key || '').trim().toLowerCase();
+  return (
+    !value ||
+    value.includes('your-key') ||
+    value.includes('your-openai-key') ||
+    value.includes('your-nvidia-key') ||
+    value.includes('your-key-here')
+  );
+}
+
+function formatFetchError(err, req) {
+  const provider = getProviderConfig()?.name || state.provider;
+  const baseUrl = getBaseUrl();
+  const reason = String(err?.message || err || 'Unknown error');
+
+  if (getProviderConfig()?.format === 'ag3nt') {
+    return [
+      `Connection failed: AG3NT Gateway is unreachable or returned an error.`,
+      `Start the stack and verify Gateway health at http://127.0.0.1:18789/api/health.`,
+      `Gateway URL: ${baseUrl} | Reason: ${reason}`,
+    ].join(' ');
+  }
+
+  if (reason.toLowerCase().includes('failed to fetch')) {
+    if (window.location.protocol === 'file:') {
+      return [
+        `Connection failed: browser blocked network request from file:// origin.`,
+        `Run JARVIS from a local server (or use AG3NT UI), then retry.`,
+        `Provider: ${provider} | URL: ${baseUrl}`,
+      ].join(' ');
+    }
+
+    return [
+      `Connection failed: network or CORS error while contacting provider.`,
+      `Check endpoint/API key/firewall and verify provider allows browser-origin requests.`,
+      `Provider: ${provider} | URL: ${baseUrl}`,
+    ].join(' ');
+  }
+
+  return `Connection failed: ${reason}`;
+}
+
+// ─── API CALL ───────────────────────────────────────────────
+
+async function callAPI() {
+  state.isThinking = true;
+  sendBtn.disabled = true;
+  orbCore.classList.add('thinking');
+  orbCore.innerHTML = '···';
+  stateLabel.textContent = 'THINKING...';
+  statusDot.classList.add('thinking');
+  requestMeta.textContent = '';
+
+  const aiMsgEl = addAIMsg('', false);
+  const contentEl = aiMsgEl.querySelector('.msg-content');
+  contentEl.innerHTML = '<span class="cursor"></span>';
+
+  const startTime = performance.now();
+
+  try {
+    const cfg = getProviderConfig();
+    const req = buildApiRequest(state.messages, true);
+
+    const response = await fetchWithRetry(req.url, {
+      method: 'POST',
+      headers: req.headers,
+      body: JSON.stringify(req.body),
+    });
+
+    let fullText = '';
+    let usage = null;
+    let pairingRequired = false;
+    let pairingCode = null;
+    contentEl.innerHTML = '';
+
+    for await (const chunk of parseStream(response, cfg.format)) {
+      if (chunk.sessionId) {
+        state.sessionId = chunk.sessionId;
+      }
+      if (chunk.error) {
+        throw new Error(chunk.error);
+      }
+      if (chunk.pairingRequired) {
+        pairingRequired = true;
+        pairingCode = chunk.pairingCode || null;
+      }
+      if (chunk.text) {
+        fullText += chunk.text;
+        contentEl.innerHTML = mdToHtml(fullText) + '<span class="cursor"></span>';
+        chatArea.scrollTop = chatArea.scrollHeight;
+      }
+      if (chunk.usage) usage = chunk.usage;
+    }
+
+    if (cfg.format === 'ag3nt' && pairingRequired && state.sessionId && pairingCode) {
+      const approved = await approveGatewaySession(state.sessionId, pairingCode);
+      if (approved) {
+        const retryReq = buildApiRequest(state.messages, false);
+        const retryResp = await fetchWithRetry(retryReq.url, {
+          method: 'POST',
+          headers: retryReq.headers,
+          body: JSON.stringify(retryReq.body),
+        }, 0);
+        const retryData = await retryResp.json();
+        fullText = retryData?.text || 'Session approved. Please send your message again.';
+      }
+    }
+
+    contentEl.innerHTML = mdToHtml(fullText);
+    state.messages.push({ role: 'assistant', content: fullText });
+    chatArea.scrollTop = chatArea.scrollHeight;
+
+    const elapsed = ((performance.now() - startTime) / 1000).toFixed(1);
+    let metaText = `${elapsed}s`;
+    if (usage) {
+      const tokens = usage.output_tokens || usage.completion_tokens || 0;
+      if (tokens) metaText += ` · ${tokens} tokens`;
+    }
+    requestMeta.textContent = metaText;
+
+    speak(fullText);
+
+  } catch (err) {
+    contentEl.innerHTML = `<span style="color:var(--danger)">ERROR: ${escHtml(err.message)}</span>`;
+    showToast(err.message, true);
+  } finally {
+    state.isThinking = false;
+    state.abortController = null;
+    sendBtn.disabled = false;
+    orbCore.classList.remove('thinking');
+    orbCore.innerHTML = 'JAR<br>VIS';
+    stateLabel.textContent = 'READY';
+    statusDot.classList.remove('thinking');
+  }
+}
+
+// ─── PROVIDER SWITCHING ─────────────────────────────────────
+
+function switchProvider(provider) {
+  $('providerSelect').value = provider;
+  onProviderChange();
+  // Restore saved key for this provider
+  const savedKey = localStorage.getItem(`ag3nt_key_${provider}`);
+  if (savedKey) $('apiKey').value = savedKey;
+}
+
+function onProviderChange() {
+  const provider = $('providerSelect').value;
+  state.provider = provider;
+  const cfg = PROVIDERS[provider];
+
+  // Show/hide base URL
+  $('baseUrlWrap').classList.toggle('hidden', !cfg.needsBaseUrl);
+  if (cfg.needsBaseUrl) {
+    $('baseUrl').value = state.baseUrl || cfg.defaultBaseUrl || '';
+  }
+
+  // Update key hint  
+  $('apiKey').placeholder = cfg.keyPlaceholder;
+  $('keyHint').textContent = cfg.keyHint;
+
+  // Update model dropdown
+  const modelSelect = $('modelSelect');
+  modelSelect.innerHTML = '';
+  cfg.models.forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m.value;
+    opt.textContent = m.label;
+    modelSelect.appendChild(opt);
+  });
+
+  // Update provider tags
+  document.querySelectorAll('.profile-tag').forEach(tag => {
+    tag.classList.toggle('active', tag.dataset.provider === provider);
+  });
+
+  // Restore saved values for this provider
+  const savedKey = localStorage.getItem(`ag3nt_key_${provider}`);
+  const savedModel = localStorage.getItem(`ag3nt_model_${provider}`);
+  const savedUrl = localStorage.getItem(`ag3nt_url_${provider}`);
+  if (savedKey) $('apiKey').value = savedKey;
+  if (savedModel) { 
+    $('modelSelect').value = savedModel;
+    if (!$('modelSelect').value) $('customModel').value = savedModel;
+  }
+  if (savedUrl && cfg.needsBaseUrl) $('baseUrl').value = savedUrl;
+}
+
+// ─── CONFIG SAVE / LOAD ─────────────────────────────────────
+
+function saveConfig() {
+  const key = $('apiKey').value.trim();
+  const provider = $('providerSelect').value;
+  if (!key && provider !== 'gateway') {
+    showToast('API key is required', true);
+    return;
+  }
+
+  state.provider = provider;
+  state.apiKey = key;
+  state.model = $('modelSelect').value;
+  state.baseUrl = $('baseUrl').value.trim();
+  state.maxTokens = parseInt($('maxTokens').value) || 4096;
+  state.temperature = parseFloat($('temperature').value);
+  if (!Number.isFinite(state.temperature)) state.temperature = 1;
+  state.topP = parseFloat($('topP').value);
+  if (!Number.isFinite(state.topP)) state.topP = 1;
+  state.persona = $('personaSelect').value;
+
+  const customModel = $('customModel').value.trim();
+  if (customModel) state.model = customModel;
+
+  // Save to localStorage (per-provider keys for easy switching)
+  localStorage.setItem('ag3nt_provider', state.provider);
+  localStorage.setItem(`ag3nt_key_${state.provider}`, state.apiKey);
+  localStorage.setItem(`ag3nt_model_${state.provider}`, state.model);
+  localStorage.setItem(`ag3nt_url_${state.provider}`, state.baseUrl);
+  localStorage.setItem('ag3nt_maxTokens', state.maxTokens.toString());
+  localStorage.setItem('ag3nt_temperature', state.temperature.toString());
+  localStorage.setItem('ag3nt_topP', state.topP.toString());
+  localStorage.setItem('ag3nt_persona', state.persona);
+
+  state.initialized = true;
+
+  // Update UI
+  const cfg = getProviderConfig();
+  statusDot.classList.remove('offline');
+  statusText.textContent = `ONLINE — ${cfg.name.toUpperCase()}`;
+  $('providerBadge').textContent = cfg.name.split('(')[0].trim().toUpperCase();
+  $('providerBadge').className = 'badge green';
+  $('modelBadge').textContent = (customModel || state.model).split('/').pop().toUpperCase();
+  $('modelBadge').style.display = 'inline-block';
+  stateLabel.textContent = 'READY';
+
+  recognition = initRecognition();
+  addSystemMsg(`▸ INITIALIZED — ${cfg.name} / ${getModel()}`);
+
+  const persona = state.persona;
+  const greeting = persona === 'jarvis'
+    ? "Systems online. I have full knowledge of your AG3NT project. Ask me anything — debug, architecture, configurations, or new features."
+    : persona === 'dev'
+    ? "Developer mode active. Ready to debug, architect, and optimize your codebase."
+    : persona === 'analyst'
+    ? "Analyst mode active. Ready to review architecture and surface improvements."
+    : persona === 'creative'
+    ? "Creative mode active. Let's create something amazing together."
+    : "Ready.";
+  addAIMsg(greeting, true);
+  speak(greeting);
+  showToast('System initialized — config saved to browser');
+}
+
+function loadSavedConfig() {
+  const provider = localStorage.getItem('ag3nt_provider');
+  if (!provider) return;
+
+  $('providerSelect').value = provider;
+  state.provider = provider;
+  onProviderChange();
+
+  const savedKey = localStorage.getItem(`ag3nt_key_${provider}`);
+  const savedModel = localStorage.getItem(`ag3nt_model_${provider}`);
+  const savedUrl = localStorage.getItem(`ag3nt_url_${provider}`);
+  const savedMaxTokens = localStorage.getItem('ag3nt_maxTokens');
+  const savedTemperature = localStorage.getItem('ag3nt_temperature');
+  const savedTopP = localStorage.getItem('ag3nt_topP');
+  const savedPersona = localStorage.getItem('ag3nt_persona');
+
+  if (savedKey) $('apiKey').value = savedKey;
+  if (savedModel) {
+    $('modelSelect').value = savedModel;
+    if (!$('modelSelect').value) $('customModel').value = savedModel;
+  }
+  if (savedUrl && PROVIDERS[provider]?.needsBaseUrl) $('baseUrl').value = savedUrl;
+  if (savedMaxTokens) $('maxTokens').value = savedMaxTokens;
+  if (savedTemperature) $('temperature').value = savedTemperature;
+  if (savedTopP) $('topP').value = savedTopP;
+  if (savedPersona) $('personaSelect').value = savedPersona;
+}
+
+function clearSavedConfig() {
+  const keys = Object.keys(localStorage).filter(k => k.startsWith('ag3nt_'));
+  keys.forEach(k => localStorage.removeItem(k));
+  state.initialized = false;
+  state.apiKey = '';
+  statusDot.classList.add('offline');
+  statusText.textContent = 'OFFLINE — SET API KEY';
+  $('providerBadge').textContent = 'NO PROVIDER';
+  $('providerBadge').className = 'badge blue';
+  $('modelBadge').style.display = 'none';
+  $('apiKey').value = '';
+  $('customModel').value = '';
+  $('maxTokens').value = '4096';
+  $('temperature').value = '1';
+  $('topP').value = '1';
+  showToast('Saved configuration cleared');
+}
+
+// ─── CONNECTION TEST ────────────────────────────────────────
+
+async function testConnection() {
+  const provider = $('providerSelect').value;
+  const key = $('apiKey').value.trim();
+  if (!key && provider !== 'gateway') { showToast('Enter API key first', true); return; }
+  if (provider !== 'gateway' && isPlaceholderKey(key)) {
+    showToast('Enter a real API key (placeholder key detected).', true);
+    return;
+  }
+
+  // Temporarily set state for the test
+  const prevKey = state.apiKey;
+  const prevProvider = state.provider;
+  state.apiKey = key;
+  state.provider = provider;
+  state.baseUrl = $('baseUrl').value.trim();
+  state.model = $('customModel').value.trim() || $('modelSelect').value;
+
+  showToast('Testing connection...');
+
+  try {
+    const req = buildApiRequest([{ role: 'user', content: 'Say "connection successful" in exactly 2 words.' }], false);
+    const response = await fetchWithRetry(req.url, {
+      method: 'POST',
+      headers: req.headers,
+      body: JSON.stringify(req.body),
+    }, 0);
+
+    const data = await response.json();
+    showToast('✓ Connection successful! Provider is reachable.');
+  } catch (err) {
+    showToast(formatFetchError(err), true);
+    state.apiKey = prevKey;
+    state.provider = prevProvider;
+  }
+}
+
+// ─── AG3NT STACK HEALTH CHECK ───────────────────────────────
+
+async function checkAG3NTStack() {
+  const gatewayBase = getGatewayBaseUrl();
+  const hostedInUi = window.location.protocol.startsWith('http')
+    && (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost')
+    && window.location.port === '3000';
+
+  const endpoints = hostedInUi
+    ? [
+        { id: 'gwStatus', url: '/api/ag3nt/gateway/health', label: 'Gateway' },
+        { id: 'agStatus', url: '/api/agent/health', label: 'Agent' },
+        { id: 'uiStatus', url: '/', label: 'UI' },
+      ]
+    : [
+        { id: 'gwStatus', url: `${gatewayBase}/api/health`, label: 'Gateway' },
+        { id: 'agStatus', url: 'http://127.0.0.1:18790/health', label: 'Agent' },
+        { id: 'uiStatus', url: 'http://127.0.0.1:3000', label: 'UI' },
+      ];
+
+  for (const ep of endpoints) {
+    const badge = $(ep.id);
+    try {
+      const ctrl = new AbortController();
+      setTimeout(() => ctrl.abort(), 3000);
+      const resp = await fetch(ep.url, { signal: ctrl.signal });
+      if (resp.ok) {
+        badge.textContent = 'ONLINE';
+        badge.className = 'badge green';
+      } else {
+        badge.textContent = 'ERROR';
+        badge.className = 'badge yellow';
+      }
+    } catch {
+      badge.textContent = 'OFFLINE';
+      badge.className = 'badge red';
+    }
+  }
+}
+
+async function approveGatewaySession(sessionId, code) {
+  try {
+    const gatewayBase = getGatewayBaseUrl();
+    const encodedId = encodeURIComponent(`cli:local:${sessionId}`);
+    const response = await fetch(`${gatewayBase}/api/sessions/${encodedId}/approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code }),
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+function openGatewaySettings() {
+  const gatewayBase = getGatewayBaseUrl();
+  window.open(gatewayBase, '_blank', 'noopener');
+}
+
+// ─── SEND MESSAGE ───────────────────────────────────────────
+
+async function sendMessage() {
+  const text = userInput.value.trim();
+  if (!text || state.isThinking) return;
+  if (!state.initialized) { showToast('Initialize system first — configure provider and API key', true); return; }
+
+  userInput.value = '';
+  autoResize(userInput);
+  addUserMsg(text);
+  state.messages.push({ role: 'user', content: text });
+  await callAPI();
+}
+
+function quickSend(text) {
+  if (!state.initialized) { showToast('Initialize system first', true); return; }
+  userInput.value = text;
+  sendMessage();
+}
+
+// ─── VOICE ──────────────────────────────────────────────────
+
+function initVoices() {
+  const voiceSelect = $('voiceSelect');
+  const voices = speechSynthesis.getVoices();
+  voiceSelect.innerHTML = '';
+  const preferredKeywords = ['daniel', 'alex', 'google uk', 'google us', 'en-gb', 'en-us', 'zira', 'david', 'mark'];
+  const filtered = voices.filter(v => v.lang.startsWith('en'));
+  if (filtered.length === 0) voices.forEach(v => filtered.push(v));
+
+  filtered.forEach(v => {
+    const opt = document.createElement('option');
+    opt.value = v.name;
+    opt.textContent = v.name + (v.localService ? ' ★' : '');
+    voiceSelect.appendChild(opt);
+  });
+
+  const preferred = filtered.find(v =>
+    preferredKeywords.some(k => v.name.toLowerCase().includes(k))
+  ) || filtered[0];
+  if (preferred) {
+    voiceSelect.value = preferred.name;
+    selectedVoice = preferred;
+  }
+
+  if (filtered.length > 0) {
+    $('voiceBadge').style.display = 'inline-block';
+  }
+}
+
+speechSynthesis.onvoiceschanged = initVoices;
+initVoices();
+
+$('voiceSelect').addEventListener('change', function() {
+  selectedVoice = speechSynthesis.getVoices().find(v => v.name === this.value);
+});
+
+$('speechRate').addEventListener('input', function() {
+  speechRate = parseFloat(this.value);
+  $('rateLabel').textContent = speechRate.toFixed(1) + 'x';
+});
+
+function speak(text) {
+  if (!state.voiceEnabled) return;
+  speechSynthesis.cancel();
+  const clean = text.replace(/```[\s\S]*?```/g, 'code block').replace(/[*#`_~]/g, '').replace(/\n+/g, ' ').trim();
+  if (!clean) return;
+
+  // Break into chunks (speechSynthesis has a ~200 char limit in some browsers)
+  const chunks = clean.match(/.{1,180}[.!?\s]|.{1,200}/g) || [clean];
+  chunks.forEach((chunk, i) => {
+    const utt = new SpeechSynthesisUtterance(chunk.trim());
+    const voices = speechSynthesis.getVoices();
+    const sel = $('voiceSelect').value;
+    utt.voice = voices.find(v => v.name === sel) || null;
+    utt.rate = speechRate;
+    utt.pitch = 0.9;
+    utt.volume = 1;
+    speechSynthesis.speak(utt);
+  });
+}
+
+function testVoice() { speak("AG3NT JARVIS online. All systems operational. Ready to assist."); }
+
+function toggleVoiceOutput() {
+  state.voiceEnabled = !state.voiceEnabled;
+  const btn = $('voiceOutBtn');
+  btn.textContent = state.voiceEnabled ? '🔊 VOICE ON' : '🔇 VOICE OFF';
+  btn.classList.toggle('active-btn', state.voiceEnabled);
+  if (!state.voiceEnabled) speechSynthesis.cancel();
+}
+
+// ─── SPEECH RECOGNITION ─────────────────────────────────────
+
+function initRecognition() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) return null;
+  const r = new SpeechRecognition();
+  r.continuous = false;
+  r.interimResults = true;
+  r.lang = 'en-US';
+
+  r.onstart = () => {
+    state.isListening = true;
+    micBtn.classList.add('active');
+    orbCore.classList.add('listening');
+    orbCore.innerHTML = '🎙';
+    stateLabel.textContent = 'LISTENING...';
+    ring1.style.animationDuration = '0.5s';
+    ring1.style.borderTopColor = 'var(--danger)';
+  };
+
+  r.onresult = (e) => {
+    let interim = '', final = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) final += e.results[i][0].transcript;
+      else interim += e.results[i][0].transcript;
+    }
+    interimText.textContent = interim || final;
+    if (final) { userInput.value = final; autoResize(userInput); }
+  };
+
+  r.onend = () => {
+    state.isListening = false;
+    micBtn.classList.remove('active');
+    orbCore.classList.remove('listening');
+    orbCore.innerHTML = 'JAR<br>VIS';
+    ring1.style.animationDuration = '4s';
+    ring1.style.borderTopColor = '';
+    stateLabel.textContent = state.initialized ? 'READY' : 'CLICK ORB OR TYPE BELOW';
+    interimText.textContent = '';
+    if (userInput.value.trim()) sendMessage();
+  };
+
+  r.onerror = (e) => {
+    stateLabel.textContent = 'MIC ERROR: ' + e.error.toUpperCase();
+    state.isListening = false;
+    micBtn.classList.remove('active');
+    orbCore.classList.remove('listening');
+    orbCore.innerHTML = 'JAR<br>VIS';
+    ring1.style.animationDuration = '4s';
+  };
+
+  return r;
+}
+
+function toggleListening() {
+  if (!state.initialized) { showToast('Initialize system first', true); return; }
+  if (!recognition) {
+    recognition = initRecognition();
+    if (!recognition) { showToast('Speech recognition not supported in this browser', true); return; }
+  }
+  if (state.isListening) recognition.stop();
+  else recognition.start();
+}
+
+// ─── MARKDOWN → HTML ────────────────────────────────────────
+
+function mdToHtml(text) {
+  return text
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) =>
+      `<pre><code>${code.trim()}</code></pre>`)
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong style="color:#fff;font-weight:600">$1</strong>')
+    .replace(/^### (.+)$/gm, '<div style="font-family:Orbitron,monospace;font-size:0.7rem;color:var(--c1);margin:0.8rem 0 0.3rem;letter-spacing:0.1em">$1</div>')
+    .replace(/^## (.+)$/gm, '<div style="font-family:Orbitron,monospace;font-size:0.8rem;color:var(--c1);margin:1rem 0 0.4rem;letter-spacing:0.1em">$1</div>')
+    .replace(/^# (.+)$/gm, '<div style="font-family:Orbitron,monospace;font-size:0.9rem;color:var(--c1);margin:1rem 0 0.5rem;letter-spacing:0.12em">$1</div>')
+    .replace(/^- (.+)$/gm, '<div style="padding-left:1rem;margin:0.1rem 0">▸ $1</div>')
+    .replace(/^\d+\. (.+)$/gm, '<div style="padding-left:1rem;margin:0.1rem 0">• $1</div>')
+    .replace(/\n\n/g, '</p><p style="margin:0.4rem 0">')
+    .replace(/\n/g, '<br>');
+}
+
+function escHtml(t) { return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+// ─── DOM HELPERS ────────────────────────────────────────────
+
+function addUserMsg(text) {
+  const d = document.createElement('div');
+  d.className = 'msg user';
+  d.innerHTML = `<div class="msg-label">YOU</div><div>${escHtml(text)}</div>`;
+  chatArea.appendChild(d);
+  chatArea.scrollTop = chatArea.scrollHeight;
+  return d;
+}
+
+function addAIMsg(text, speak_it = false) {
+  const d = document.createElement('div');
+  d.className = 'msg ai';
+  d.innerHTML = `<div class="msg-label">JARVIS</div><div class="msg-content">${text ? mdToHtml(text) : ''}</div>`;
+  chatArea.appendChild(d);
+  chatArea.scrollTop = chatArea.scrollHeight;
+  if (speak_it && text) speak(text);
+  return d;
+}
+
+function addSystemMsg(text) {
+  const d = document.createElement('div');
+  d.className = 'msg system';
+  d.textContent = text;
+  chatArea.appendChild(d);
+  chatArea.scrollTop = chatArea.scrollHeight;
+}
+
+function clearChat() {
+  state.messages = [];
+  chatArea.innerHTML = '<div class="msg system">▸ CONVERSATION CLEARED — MEMORY RESET</div>';
+}
+
+// ─── TOAST ──────────────────────────────────────────────────
+
+function showToast(msg, err = false) {
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+  const t = document.createElement('div');
+  t.className = 'toast' + (err ? ' err' : '');
+  t.textContent = (err ? '⚠ ' : '✓ ') + msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+
+// ─── INPUT ──────────────────────────────────────────────────
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+function enforceSafeStartupDefaults() {
+  const savedProvider = localStorage.getItem('ag3nt_provider') || '';
+  const savedCustomKey = localStorage.getItem('ag3nt_key_custom') || '';
+
+  // If launched from file://, force a browser-safe default path.
+  if (window.location.protocol === 'file:') {
+    if (savedProvider === 'custom' && isPlaceholderKey(savedCustomKey)) {
+      localStorage.setItem('ag3nt_provider', 'gateway');
+    }
+
+    // Prefer running inside the local AG3NT UI to avoid file-origin fetch restrictions.
+    if (window.location.href.indexOf('http://127.0.0.1:3000/jarvis') === -1) {
+      setTimeout(() => {
+        window.location.href = 'http://127.0.0.1:3000/jarvis';
+      }, 150);
+    }
+  }
+}
+
+// ─── INIT ───────────────────────────────────────────────────
+
+enforceSafeStartupDefaults();
+// Load saved config on page load
+loadSavedConfig();
+// Set initial provider UI
+onProviderChange();
+// Check AG3NT stack health
+setTimeout(checkAG3NTStack, 1000);
+
+</script>
+
+</body>
+</html>

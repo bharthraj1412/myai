@@ -19,6 +19,26 @@ logger = logging.getLogger("ag3nt.model")
 _model_cache: dict[str, BaseChatModel] = {}
 
 
+def _is_placeholder_key(value: str | None) -> bool:
+    """Return True when a key is empty or clearly a template placeholder."""
+    key = (value or "").strip().lower()
+    if not key:
+        return True
+    return any(
+        marker in key
+        for marker in (
+            "your-key",
+            "your-openai-key",
+            "your-openrouter-key",
+            "your-nvidia-key",
+            "your-google-key",
+            "your-groq-key",
+            "your-key-here",
+            "replace-me",
+        )
+    )
+
+
 def get_model_config() -> tuple[str, str]:
     """Get the model provider and name from environment.
 
@@ -30,17 +50,19 @@ def get_model_config() -> tuple[str, str]:
 
     if not provider:
         # Check for custom provider first
-        if os.environ.get("AG3NT_CUSTOM_MODEL_URL"):
+        if os.environ.get("AG3NT_CUSTOM_MODEL_URL") and not _is_placeholder_key(
+            os.environ.get("AG3NT_CUSTOM_API_KEY")
+        ):
             provider = "custom"
-        elif os.environ.get("OPENROUTER_API_KEY"):
+        elif not _is_placeholder_key(os.environ.get("OPENROUTER_API_KEY")):
             provider = "openrouter"
-        elif os.environ.get("ANTHROPIC_API_KEY"):
+        elif not _is_placeholder_key(os.environ.get("ANTHROPIC_API_KEY")):
             provider = "anthropic"
-        elif os.environ.get("OPENAI_API_KEY"):
+        elif not _is_placeholder_key(os.environ.get("OPENAI_API_KEY")):
             provider = "openai"
-        elif os.environ.get("GOOGLE_API_KEY"):
+        elif not _is_placeholder_key(os.environ.get("GOOGLE_API_KEY")):
             provider = "google"
-        elif os.environ.get("KIMI_API_KEY"):
+        elif not _is_placeholder_key(os.environ.get("KIMI_API_KEY")):
             provider = "kimi"
         else:
             provider = "anthropic"
@@ -100,6 +122,33 @@ def _create_kimi_model(model_name: str) -> BaseChatModel:
     )
 
 
+def _create_openai_compatible_model(model_name: str) -> BaseChatModel:
+    """Create a ChatOpenAI instance for OpenAI-compatible endpoints.
+
+    Reads configuration from environment variables:
+      - OPENAI_API_KEY: Required API key
+      - OPENAI_BASE_URL: Optional base URL (defaults to OpenAI)
+
+    This allows direct use of compatible providers such as NVIDIA's
+    integrate endpoint while keeping provider selection in AG3NT.
+    """
+    api_key = os.environ.get("OPENAI_API_KEY")
+    base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
+
+    if not api_key:
+        raise ValueError(
+            "OPENAI_API_KEY environment variable is required when using OpenAI-compatible models."
+        )
+
+    from langchain_openai import ChatOpenAI
+
+    return ChatOpenAI(
+        model=model_name,
+        openai_api_key=api_key,
+        openai_api_base=base_url,
+    )
+
+
 def _create_custom_model(model_name: str) -> BaseChatModel:
     """Create a ChatOpenAI instance for a custom OpenAI-compatible endpoint.
 
@@ -122,6 +171,16 @@ def _create_custom_model(model_name: str) -> BaseChatModel:
     base_url = base_url.rstrip("/")
     if base_url.endswith("/chat/completions"):
         base_url = base_url[: -len("/chat/completions")]
+
+    if _is_placeholder_key(api_key):
+        # Local endpoints (Ollama/LM Studio) may not need an API key.
+        local_markers = ("localhost", "127.0.0.1", "0.0.0.0")
+        if not any(marker in base_url.lower() for marker in local_markers):
+            logger.warning(
+                "AG3NT custom provider is using a placeholder API key for a remote endpoint. "
+                "Set AG3NT_CUSTOM_API_KEY to a real key to avoid authorization failures."
+            )
+        api_key = "not-needed"
 
     from langchain_openai import ChatOpenAI
 
@@ -187,6 +246,11 @@ def create_model(*, use_cache: bool = True) -> BaseChatModel | str:
 
     if provider == "kimi":
         instance = _create_kimi_model(model_name)
+        _model_cache[cache_key] = instance
+        return instance
+
+    if provider == "openai":
+        instance = _create_openai_compatible_model(model_name)
         _model_cache[cache_key] = instance
         return instance
 

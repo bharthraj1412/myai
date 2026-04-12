@@ -539,7 +539,7 @@ class GitTool:
     ) -> GitResult:
         """Push commits to remote.
 
-        Note: Force pushes require HITL approval. Non-force pushes proceed normally.
+        Push always requires HITL approval. Use execute_push after approval.
 
         Args:
             remote: Remote name.
@@ -547,7 +547,7 @@ class GitTool:
             force: Force push (dangerous!).
 
         Returns:
-            GitResult with push outcome, or requires_approval=True for force pushes.
+            GitResult with requires_approval=True and the prepared push target.
         """
         args = [remote]
         if branch:
@@ -566,9 +566,14 @@ class GitTool:
                 requires_approval=True,
             )
 
-        # Non-force push is safe — execute directly
-        cmd_args = ["push"] + args
-        return self._execute("push", cmd_args, check=False)
+        target = f"{remote}{('/' + branch) if branch else ''}"
+        return GitResult(
+            operation="push",
+            success=False,
+            output="",
+            error=f"Push to {target} requires approval",
+            requires_approval=True,
+        )
 
     def execute_push(
         self,

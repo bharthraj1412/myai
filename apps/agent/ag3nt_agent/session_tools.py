@@ -389,8 +389,18 @@ def _get_gateway_url() -> str:
     return os.environ.get("AG3NT_GATEWAY_URL", "http://localhost:18789")
 
 
-def _run_async(coro):
-    """Run an async coroutine synchronously."""
+def _run_async(coro_or_fn, *args, **kwargs):
+    """Run async work synchronously.
+
+    Accepts either:
+    - a coroutine object, or
+    - an async callable plus args/kwargs
+    """
+    if asyncio.iscoroutine(coro_or_fn):
+        coro = coro_or_fn
+    else:
+        coro = coro_or_fn(*args, **kwargs)
+
     try:
         loop = asyncio.get_running_loop()
         import concurrent.futures
@@ -412,7 +422,7 @@ def sessions_list(channel_type: str | None = None) -> str:
     """
     try:
         st = SessionTools(_get_gateway_url())
-        sessions = _run_async(st.list_sessions(channel_type=channel_type))
+        sessions = _run_async(st.list_sessions, channel_type=channel_type)
         if not sessions:
             return "No active sessions found."
 
@@ -438,7 +448,7 @@ def sessions_history(session_id: str, limit: int = 20) -> str:
     """
     try:
         st = SessionTools(_get_gateway_url())
-        messages = _run_async(st.get_history(session_id, limit=limit))
+        messages = _run_async(st.get_history, session_id, limit=limit)
         if not messages:
             return f"No messages found for session {session_id}."
 
@@ -464,7 +474,7 @@ def sessions_send(session_id: str, content: str) -> str:
     """
     try:
         st = SessionTools(_get_gateway_url())
-        result = _run_async(st.send_message(session_id, content))
+        result = _run_async(st.send_message, session_id, content)
         if result.success:
             return f"Message sent to session {session_id}."
         return f"Failed to send message: {result.error}"

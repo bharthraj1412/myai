@@ -119,13 +119,13 @@ _Verification evidence will be added during VERIFY phase._
         
         content = re.sub(
             r'^(phase:\s*).+$',
-            f'\\1{phase}',
+            lambda m: f"{m.group(1)}{phase}",
             content,
             flags=re.MULTILINE
         )
         content = re.sub(
             r'^(updated:\s*).+$',
-            f'\\1{datetime.now().isoformat()}',
+            lambda m: f"{m.group(1)}{datetime.now().isoformat()}",
             content,
             flags=re.MULTILINE
         )
@@ -147,7 +147,7 @@ _Verification evidence will be added during VERIFY phase._
         
         content = re.sub(
             r'^(progress:\s*).+$',
-            f'\\1{progress}',
+            lambda m: f"{m.group(1)}{progress}",
             content,
             flags=re.MULTILINE
         )

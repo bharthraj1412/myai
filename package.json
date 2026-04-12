@@ -9,5 +9,8 @@
     "build:assistant:setup": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/build-assistant-installer.ps1",
     "assistant:install": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"if (-not (Test-Path ./dist/AG3NT-Assistant-Setup.exe)) { Write-Host 'Setup EXE not found. Run pnpm run build:assistant:setup first.'; exit 1 }; ./dist/AG3NT-Assistant-Setup.exe\"",
     "assistant:uninstall": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"if (-not (Test-Path ./dist/AG3NT-Assistant-Setup.exe)) { Write-Host 'Setup EXE not found. Run pnpm run build:assistant:setup first.'; exit 1 }; ./dist/AG3NT-Assistant-Setup.exe --silent --uninstall\""
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0"
   }
 }

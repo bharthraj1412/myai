@@ -39,14 +39,21 @@ All core infrastructure components are built, linked, and verified:
    - Converted all legacy kebab-case skill folders into standard TitleCase format (e.g., `app-launcher` → `AppLauncher`).
    - Re-audited `SKILL.md` metadata, restoring missing ones (e.g., Heartbeat).
 
+8. **AI Provider & Stability Patches**
+   - Added robust OpenRouter, Anthropic, Custom/NVIDIA (`integrate.api.nvidia.com`), and Google streaming support.
+   - `JARVIS.html` decoupled into a fully functional multi-provider standalone app with `localStorage` state.
+   - Fixed fundamental backend instability by downgrading virtual environment from Python 3.14 to Python 3.12 (fixing underlying Pydantic/LangChain crashes).
+   - Patched missing `memory_store` agent tools blocking correct execution dynamics.
+
 ## Final Checklist & Next Steps
 
 If you are ready to start using the system, there are a few manual configuration options you should personalize before going live:
 
 - [ ] **Data Personalization**: Update the files within `USER/TELOS/` (`GOALS.md`, `BELIEFS.md`, `MANIFESTO.md`) with your personal metrics and identity to ensure the Algorithm aligns with what matters to you.
+- [ ] **Custom Endpoints**: Ensure your `JARVIS.html` model configurations map appropriately to `.env` values (`AG3NT_CUSTOM_API_KEY`, etc.).
 - [ ] **Voice Setup**: You have the `VoiceTTS` skill installed. Ensure your `ELEVENLABS_API_KEY` (or chosen provider) is correctly established in the root `.env` to leverage the new TTS hook architecture.
 - [ ] **Verify Routing Policies**: Review `config/settings.json` and ensure the hook execution timeouts (`hookTimeoutMs`: 5000) and directories align with your deployment preferences.
 
 ## Summary
 
-The AG3NT agent is now highly structured, fully persistent natively across its memory stores, automatically tracked via PRDs for significant work, and visually explorable directly from the integrated custom UI dashboard.
+The AG3NT agent is now highly structured, fully persistent natively across its memory stores, automatically tracked via PRDs for significant work, visually explorable directly from the integrated custom UI dashboard, and highly stable across a unified Python 3.12 multi-provider backend.

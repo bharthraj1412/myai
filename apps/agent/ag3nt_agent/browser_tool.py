@@ -59,8 +59,8 @@ def _validate_save_path(save_path: str) -> str:
 _persistent_loop = None
 
 
-def _run_async(coro):
-    """Run an async coroutine from synchronous code, handling nested event loops.
+def _run_async(coro_or_fn, *args, **kwargs):
+    """Run async work from synchronous code, handling nested event loops.
 
     When called inside an already-running event loop (e.g. uvicorn), plain
     asyncio.run() raises RuntimeError.  This helper detects that situation and
@@ -71,6 +71,11 @@ def _run_async(coro):
     BrowserBridge WebSocket connection and its recv_task) survive between tool
     invocations.
     """
+    if asyncio.iscoroutine(coro_or_fn):
+        coro = coro_or_fn
+    else:
+        coro = coro_or_fn(*args, **kwargs)
+
     global _persistent_loop
 
     try:
@@ -340,7 +345,7 @@ def browser_start_session(url: str = "https://www.google.com") -> str:
         return f"Live browser session started. {result}\nAgent actions are now visible in the Agent Browser UI."
 
     try:
-        return _run_async(_start())
+        return _run_async(_start)
     except Exception as e:
         return f"Error starting browser session: {str(e)}"
 
@@ -373,7 +378,7 @@ def browser_navigate(url: str, wait_until: Literal["load", "domcontentloaded", "
         return f"Navigated to: {title} ({url})"
 
     try:
-        return _run_async(_navigate())
+        return _run_async(_navigate)
     except Exception as e:
         return f"Error navigating to {url}: {str(e)}"
 
@@ -415,7 +420,7 @@ def browser_screenshot(full_page: bool = False, save_path: Optional[str] = None)
             return f"Screenshot captured (base64): {b64_data[:100]}... ({len(b64_data)} chars total)"
 
     try:
-        return _run_async(_screenshot())
+        return _run_async(_screenshot)
     except Exception as e:
         return f"Error taking screenshot: {str(e)}"
 
@@ -445,7 +450,7 @@ def browser_click(selector: str, timeout: int = 5000) -> str:
         return f"Clicked element: {selector}"
 
     try:
-        return _run_async(_click())
+        return _run_async(_click)
     except Exception as e:
         return f"Error clicking {selector}: {str(e)}"
 
@@ -475,7 +480,7 @@ def browser_fill(selector: str, text: str, timeout: int = 5000) -> str:
         return f"Filled '{selector}' with: {text}"
 
     try:
-        return _run_async(_fill())
+        return _run_async(_fill)
     except Exception as e:
         return f"Error filling {selector}: {str(e)}"
 
@@ -511,7 +516,7 @@ def browser_get_content(selector: Optional[str] = None) -> str:
             return await page.inner_text("body")
 
     try:
-        return _run_async(_get_content())
+        return _run_async(_get_content)
     except Exception as e:
         return f"Error getting content: {str(e)}"
 
@@ -559,7 +564,7 @@ def browser_wait_for(selector: str, state: Literal["attached", "detached", "visi
         return f"Element '{selector}' reached state: {state}"
 
     try:
-        return _run_async(_wait())
+        return _run_async(_wait)
     except Exception as e:
         return f"Error waiting for {selector}: {str(e)}"
 
@@ -592,7 +597,7 @@ def browser_close() -> str:
         return "Browser was not open"
 
     try:
-        result = _run_async(_close())
+        result = _run_async(_close)
     except Exception as e:
         result = f"Error closing browser: {str(e)}"
 
@@ -645,7 +650,7 @@ def browser_evaluate_js(script: str) -> str:
         return f"JS Output: {result}"
 
     try:
-        return _run_async(_evaluate())
+        return _run_async(_evaluate)
     except Exception as e:
         return f"Error evaluating JS: {str(e)}"
 
@@ -693,7 +698,7 @@ def browser_scroll(direction: Literal["up", "down", "top", "bottom"] = "down", a
         return f"Scrolled {direction}"
 
     try:
-        return _run_async(_scroll())
+        return _run_async(_scroll)
     except Exception as e:
         return f"Error scrolling: {str(e)}"
 

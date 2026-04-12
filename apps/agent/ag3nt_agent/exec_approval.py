@@ -63,6 +63,8 @@ SAFE_BINS: set[str] = {
     # Network info (read-only)
     "ping", "dig", "nslookup", "host",
     "curl", "wget",  # Allowed for reading, blocked patterns handle dangerous uses
+    # Runtime/interpreter invocations
+    "python", "python3", "pip", "pip3", "node", "npm", "npx",
 }
 
 # Safe git subcommands (read-only operations)

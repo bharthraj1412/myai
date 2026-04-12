@@ -280,6 +280,9 @@ class LearningEngine:
             except (ValueError, TypeError):
                 timestamp = now
 
+            if timestamp.tzinfo is None:
+                timestamp = timestamp.replace(tzinfo=timezone.utc)
+
             # Calculate recency factor (1.0 for today, decays over time)
             days_old = (now - timestamp).days
             recency_factor = max(0.1, 1.0 - (days_old / self.confidence_decay_days))
@@ -417,6 +420,8 @@ class LearningEngine:
             timestamp_str = result.metadata.get("timestamp")
             try:
                 timestamp = datetime.fromisoformat(timestamp_str) if timestamp_str else None
+                if timestamp and timestamp.tzinfo is None:
+                    timestamp = timestamp.replace(tzinfo=timezone.utc)
                 if timestamp and timestamp >= cutoff:
                     recent.append(result)
             except (ValueError, TypeError):

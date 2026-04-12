@@ -1,3 +1,4 @@
+import { ModelSettings } from './ModelSettings'
 'use client'
 
 import { useEffect, useState } from 'react'
@@ -18,6 +19,7 @@ import AlgorithmPanel from '@/components/algorithm/AlgorithmPanel'
 import MemoryDashboard from '@/components/memory/MemoryDashboard'
 import AgentRoster from '@/components/agents/AgentRoster'
 import TelosDashboard from '@/components/telos/TelosDashboard'
+import { SkillsLibraryModule } from '@/components/modules/skills-library-module'
 
 const SYSTEM_PILLARS = [
   {
@@ -43,9 +45,9 @@ const SYSTEM_PILLARS = [
 ]
 
 const QUICK_LINKS = [
-  { label: 'View dashboard route', href: '/dashboard' },
-  { label: 'Review architecture', href: '/dashboard#architecture' },
-  { label: 'Inspect memory runtime', href: '/dashboard#memory' },
+  { label: 'Open JARVIS console', href: '/jarvis' },
+  { label: 'Review architecture', href: '/jarvis' },
+  { label: 'Inspect memory runtime', href: '/jarvis' },
 ]
 
 type GatewayHealth = {
@@ -103,7 +105,7 @@ export function PAIDashboardShell() {
 
     const load = async () => {
       try {
-        const [healthRes, statsRes, workRes] = await Promise.allSettled([
+        const [healthRes, statusRes, statsRes, workRes] = await Promise.allSettled([
           fetch('/api/ag3nt/gateway/health', { cache: 'no-store' }),
           fetch('/api/ag3nt/gateway/status', { cache: 'no-store' }),
           fetch('/api/memory/stats', { cache: 'no-store' }),
@@ -112,19 +114,19 @@ export function PAIDashboardShell() {
 
         if (cancelled) return
 
-        if (healthRes.status === 'fulfilled') {
+        if (healthRes.status === 'fulfilled' && healthRes.value.ok) {
           setGateway((await readJson<GatewayHealth>(healthRes.value)) || null)
         }
 
-        if (statusRes.status === 'fulfilled') {
+        if (statusRes.status === 'fulfilled' && statusRes.value.ok) {
           setStatus((await readJson<GatewayStatus>(statusRes.value)) || null)
         }
 
-        if (statsRes.status === 'fulfilled') {
+        if (statsRes.status === 'fulfilled' && statsRes.value.ok) {
           setStats((await readJson<MemoryStats>(statsRes.value)) || null)
         }
 
-        if (workRes.status === 'fulfilled') {
+        if (workRes.status === 'fulfilled' && workRes.value.ok) {
           setCurrentWork((await readJson<CurrentWork>(workRes.value)) || null)
         }
 
@@ -150,6 +152,9 @@ export function PAIDashboardShell() {
   return (
     <div data-testid="pai-dashboard-shell" className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(45,212,191,0.12),_transparent_32%),linear-gradient(180deg,_#050816_0%,_#0b1220_42%,_#04070f_100%)] text-slate-100">
       <Header />
+      <section className="my-8">
+        <ModelSettings />
+      </section>
 
       <main className="mx-auto flex w-full max-w-[1600px] flex-col gap-6 px-4 py-5 sm:px-6 lg:px-8">
         <section className="overflow-hidden rounded-[28px] border border-white/10 bg-white/5 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:p-8">
@@ -362,6 +367,16 @@ export function PAIDashboardShell() {
               </div>
             </section>
           </aside>
+        </section>
+
+        <section id="skills" className="rounded-[28px] border border-white/10 bg-white/5 p-5 shadow-[0_20px_70px_rgba(0,0,0,0.24)] backdrop-blur-xl sm:p-6">
+          <div className="mb-4">
+            <p className="text-xs font-medium uppercase tracking-[0.28em] text-cyan-200/80">Skills</p>
+            <h2 className="mt-1 text-xl font-semibold text-white">Local and community skills library</h2>
+          </div>
+          <div className="rounded-3xl border border-white/10 bg-[#08101d] p-2 sm:p-4">
+            <SkillsLibraryModule instanceId="dashboard-skills-library" />
+          </div>
         </section>
       </main>
     </div>

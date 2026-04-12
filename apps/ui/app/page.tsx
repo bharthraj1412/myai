@@ -1,7 +1,5 @@
-"use client"
-
-import { PAIDashboardShell } from "@/components/dashboard/pai-dashboard-shell"
+import { redirect } from 'next/navigation'
 
 export default function HomePage() {
-  return <PAIDashboardShell />
+  redirect('/jarvis')
 }

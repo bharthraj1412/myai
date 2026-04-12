@@ -128,6 +128,23 @@ class Action:
 
         return str(current)
 
+    @staticmethod
+    def _normalize_template_expr(expr: str) -> str:
+        """Normalize supported template expressions to dotted-path form.
+
+        Supports both:
+        - event.payload.message
+        - event['payload']['message']
+        """
+        normalized = expr.strip()
+
+        # Convert bracket-only key access to dotted form.
+        # Example: event['payload']['message'] -> event.payload.message
+        if "[" in normalized:
+            normalized = re.sub(r"\[['\"]([A-Za-z_][A-Za-z0-9_]*)['\"]\]", r".\1", normalized)
+
+        return normalized
+
     def render(self, event: Event) -> "Action":
         """
         Render action with event data substituted.
@@ -163,7 +180,7 @@ class Action:
                 expr = match.group(1).strip()
                 try:
                     # Safely resolve dotted-path expression against context
-                    value = Action._safe_resolve(expr, context)
+                    value = Action._safe_resolve(Action._normalize_template_expr(expr), context)
                     result = result.replace(match.group(0), value)
                 except (ValueError, Exception):
                     # Keep original if resolution fails

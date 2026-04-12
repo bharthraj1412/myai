@@ -280,6 +280,19 @@ class PoolStatsResponse(BaseModel):
 # =============================================================================
 
 
+@app.get("/")
+def root():
+    """Root endpoint with quick service discovery details."""
+    return {
+        "ok": True,
+        "name": "ag3nt-agent",
+        "service": "agent-worker",
+        "docs": "/docs",
+        "health": "/health",
+        "openapi": "/openapi.json",
+    }
+
+
 @app.get("/health")
 def health():
     """Health check endpoint."""

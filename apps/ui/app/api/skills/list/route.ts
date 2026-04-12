@@ -26,6 +26,36 @@ interface SkillMeta {
   loaded_at: string
 }
 
+function findWorkspaceRoot(): string {
+  const envCandidates = [
+    process.env.AG3NT_BACKEND_PATH,
+    process.env.NEXT_PUBLIC_AG3NT_BACKEND_PATH,
+    process.env.INIT_CWD,
+  ].filter((v): v is string => Boolean(v))
+
+  for (const candidate of envCandidates) {
+    if (existsSync(candidate) && existsSync(path.join(candidate, 'skills'))) {
+      return candidate
+    }
+  }
+
+  const cwd = process.cwd()
+  const candidates = [
+    cwd,
+    path.resolve(cwd, '..'),
+    path.resolve(cwd, '..', '..'),
+    path.resolve(cwd, '..', '..', '..'),
+  ]
+
+  for (const candidate of candidates) {
+    if (existsSync(path.join(candidate, 'skills'))) {
+      return candidate
+    }
+  }
+
+  return cwd
+}
+
 /**
  * Simple YAML frontmatter parser for skill files
  * Handles basic key: value pairs and arrays
@@ -90,13 +120,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50')
     const offset = parseInt(searchParams.get('offset') || '0')
 
-    const defaultBackendWin = 'C:\\Users\\Guerr\\Documents\\ag3nt'
-    const ag3ntBackendPath =
-      process.env.AG3NT_BACKEND_PATH ||
-      process.env.NEXT_PUBLIC_AG3NT_BACKEND_PATH ||
-      (existsSync(defaultBackendWin) ? defaultBackendWin : null)
-
-    const workspaceRoot = ag3ntBackendPath && existsSync(ag3ntBackendPath) ? ag3ntBackendPath : process.cwd()
+    const workspaceRoot = findWorkspaceRoot()
 
     // Prefer AG3NT skill locations; keep legacy .deepagents paths as fallback.
     const skillDirsInOrder: string[] = [

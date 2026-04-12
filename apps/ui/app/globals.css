@@ -2,22 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-@font-face {
-  font-family: "AG3NT Sans";
-  src: url("/fonts/GeistVF.woff2") format("woff2");
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "AG3NT Mono";
-  src: url("/fonts/GeistMonoVF.woff2") format("woff2");
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-}
-
 @layer utilities {
   .text-balance {
     text-wrap: balance;
@@ -27,10 +11,10 @@
 @layer base {
   :root {
     /* Typography - Sora + JetBrains Mono */
-    --font-sora: "AG3NT Sans";
-    --font-jetbrains-mono: "AG3NT Mono";
-    --font-sans: var(--font-sora), system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    --font-sora: "Segoe UI";
+    --font-jetbrains-mono: "Consolas";
+    --font-sans: var(--font-sora), system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
+    --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, "Liberation Mono", "Courier New", monospace;
 
     /* Text sizes */
     --text-xs: 12px;
