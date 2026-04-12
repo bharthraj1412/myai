@@ -426,25 +426,41 @@ let currentModel = '';
 
 async function loadModelConfig() {
   try {
-    const { ok, provider, model, options } = await api('/model/config');
-    if (ok) {
-      modelOptions = options;
-      currentProvider = provider;
-      currentModel = model;
+    const data = await api('/model/config');
+    if (data.ok) {
+      modelOptions = data.options;
+      currentProvider = data.provider;
+      currentModel = data.model;
 
       // Populate provider dropdown
       const providerSelect = document.getElementById('model-provider');
-      providerSelect.innerHTML = Object.entries(options).map(([key, val]) =>
-        `<option value="${key}" ${key === provider ? 'selected' : ''}>${val.name}</option>`
+      providerSelect.innerHTML = Object.entries(modelOptions).map(([key, val]) =>
+        `<option value="${key}" ${key === data.provider ? 'selected' : ''}>${val.name}</option>`
       ).join('');
 
       // Populate model dropdown
-      updateModelDropdown(provider);
+      updateModelDropdown(data.provider);
 
       // Show current config as badge
-      const providerName = options[provider]?.name || provider;
-      const modelName = options[provider]?.models?.find(m => m.id === model)?.name || model;
+      const providerName = modelOptions[data.provider]?.name || data.provider;
+      const modelName = modelOptions[data.provider]?.models?.find(m => m.id === data.model)?.name || data.model;
       document.getElementById('model-current').textContent = `${providerName} • ${modelName}`;
+
+      // Restore extra fields from server state
+      if (data.baseUrl) document.getElementById('model-base-url').value = data.baseUrl;
+      if (data.customModelName) document.getElementById('custom-model-name').value = data.customModelName;
+      if (data.temperature !== undefined) document.getElementById('model-temperature').value = data.temperature;
+      if (data.maxTokens !== undefined) document.getElementById('model-max-tokens').value = data.maxTokens;
+
+      // Show masked key status
+      if (data.apiKeySet) {
+        document.getElementById('api-key-status').textContent = `(current: ${data.apiKeyMasked})`;
+      } else {
+        document.getElementById('api-key-status').textContent = '(not set)';
+      }
+
+      // Update conditional field visibility
+      updateProviderFields(data.provider);
     }
   } catch (err) {
     console.error('Failed to load model config:', err);
@@ -458,58 +474,158 @@ function updateModelDropdown(provider) {
   modelSelect.innerHTML = models.map(m =>
     `<option value="${m.id}" ${m.id === currentModel ? 'selected' : ''}>${m.name}</option>`
   ).join('');
+
+  // If no model matches, we might have a custom one — don't reset
+  if (models.length === 0) {
+    modelSelect.innerHTML = '<option value="">No preset models — use custom model name</option>';
+  }
+}
+
+/** Show/hide fields based on what the selected provider needs. */
+function updateProviderFields(provider) {
+  const cfg = modelOptions[provider] || {};
+  const baseUrlWrap = document.getElementById('base-url-wrap');
+  const apiKeyWrap = document.getElementById('api-key-wrap');
+  const customModelWrap = document.getElementById('custom-model-wrap');
+
+  baseUrlWrap.style.display = cfg.needsBaseUrl ? 'block' : 'none';
+  apiKeyWrap.style.display = cfg.needsApiKey ? 'block' : 'none';
+  // Show custom model name for custom and ollama (user may type any model)
+  customModelWrap.style.display = (provider === 'custom' || provider === 'ollama') ? 'block' : 'none';
+
+  // Populate default base URL if empty
+  if (cfg.needsBaseUrl && cfg.defaultBaseUrl) {
+    const urlInput = document.getElementById('model-base-url');
+    if (!urlInput.value) urlInput.value = cfg.defaultBaseUrl;
+  }
+}
+
+function showValidationMsg(text, isError) {
+  const wrap = document.getElementById('validation-msg-wrap');
+  const msg = document.getElementById('validation-msg');
+  wrap.style.display = 'block';
+  msg.textContent = text;
+  msg.style.background = isError ? 'rgba(255,60,60,0.15)' : 'rgba(60,255,120,0.15)';
+  msg.style.color = isError ? '#ff6b6b' : '#6bff8b';
+  msg.style.border = `1px solid ${isError ? 'rgba(255,60,60,0.3)' : 'rgba(60,255,120,0.3)'}`;
+}
+
+function hideValidationMsg() {
+  document.getElementById('validation-msg-wrap').style.display = 'none';
 }
 
 document.getElementById('model-provider').addEventListener('change', (e) => {
-  updateModelDropdown(e.target.value);
+  const provider = e.target.value;
+  updateModelDropdown(provider);
+  updateProviderFields(provider);
+  hideValidationMsg();
 });
 
+// Toggle key visibility
+document.getElementById('toggle-key-visibility').addEventListener('click', () => {
+  const input = document.getElementById('model-api-key');
+  input.type = input.type === 'password' ? 'text' : 'password';
+});
+
+// Validate button
+document.getElementById('validate-model').addEventListener('click', async () => {
+  const btn = document.getElementById('validate-model');
+  const provider = document.getElementById('model-provider').value;
+  const apiKey = document.getElementById('model-api-key').value.trim();
+  const baseUrl = document.getElementById('model-base-url').value.trim();
+  const model = document.getElementById('model-name').value;
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Validating...';
+  hideValidationMsg();
+
+  try {
+    const result = await api('/model/validate', {
+      method: 'POST',
+      body: { provider, apiKey, baseUrl, model }
+    });
+
+    if (result.ok) {
+      showValidationMsg(
+        result.valid ? `✓ ${result.message}` : `✗ ${result.message}`,
+        !result.valid
+      );
+    } else {
+      showValidationMsg(`✗ ${result.error || 'Validation failed'}`, true);
+    }
+  } catch (err) {
+    showValidationMsg(`✗ Error: ${err.message}`, true);
+  }
+
+  btn.textContent = '⚡ Validate';
+  btn.disabled = false;
+});
+
+// Save button
 document.getElementById('save-model').addEventListener('click', async () => {
   const btn = document.getElementById('save-model');
   const provider = document.getElementById('model-provider').value;
   const model = document.getElementById('model-name').value;
+  const customModelName = document.getElementById('custom-model-name').value.trim();
+  const apiKey = document.getElementById('model-api-key').value.trim();
+  const baseUrl = document.getElementById('model-base-url').value.trim();
+  const temperature = parseFloat(document.getElementById('model-temperature').value);
+  const maxTokens = parseInt(document.getElementById('model-max-tokens').value, 10);
 
-  if (!provider || !model) {
-    alert('Please select a provider and model');
+  if (!provider) {
+    showValidationMsg('Please select a provider', true);
+    return;
+  }
+  if (!model && !customModelName) {
+    showValidationMsg('Please select or type a model name', true);
     return;
   }
 
   btn.disabled = true;
-  btn.textContent = 'Saving...';
+  btn.textContent = '⏳ Saving...';
+  hideValidationMsg();
 
   try {
+    const payload = { provider, model };
+    if (customModelName) payload.customModelName = customModelName;
+    if (apiKey) payload.apiKey = apiKey;
+    if (baseUrl) payload.baseUrl = baseUrl;
+    if (!isNaN(temperature)) payload.temperature = temperature;
+    if (!isNaN(maxTokens)) payload.maxTokens = maxTokens;
+
     const result = await api('/model/config', {
       method: 'POST',
-      body: { provider, model }
+      body: payload
     });
 
     if (result.ok) {
-      btn.textContent = 'Saved!';
-      addLog({ level: 'info', source: 'Model', message: `Model updated to ${provider}/${model}`, timestamp: new Date() });
+      showValidationMsg(`✓ ${result.message}`, false);
+      addLog({ level: 'info', source: 'Model', message: `Config saved: ${provider}/${result.model || model}`, timestamp: new Date() });
 
-      // Update current display as badge
+      // Update badge
+      const effectiveModel = result.model || customModelName || model;
       const providerName = modelOptions[provider]?.name || provider;
-      const modelDisplayName = modelOptions[provider]?.models?.find(m => m.id === model)?.name || model;
-      document.getElementById('model-current').textContent = `${providerName} • ${modelDisplayName}`;
+      document.getElementById('model-current').textContent = `${providerName} • ${effectiveModel}`;
 
-      // Prompt to restart agent
-      if (confirm('Model configuration saved. Restart agent worker now?')) {
-        // TODO: Add agent restart endpoint
-        addLog({ level: 'warn', source: 'Model', message: 'Please restart agent worker manually', timestamp: new Date() });
-      }
+      // Clear the API key input (it's saved server-side now)
+      document.getElementById('model-api-key').value = '';
+      // Reload to get masked key status
+      setTimeout(loadModelConfig, 1000);
+
+      btn.textContent = '✓ Saved!';
     } else {
-      btn.textContent = 'Failed';
-      addLog({ level: 'error', source: 'Model', message: `Failed to save: ${result.error}`, timestamp: new Date() });
+      showValidationMsg(`✗ ${result.error || 'Save failed'}`, true);
+      btn.textContent = '✗ Failed';
     }
   } catch (err) {
-    btn.textContent = 'Failed';
-    addLog({ level: 'error', source: 'Model', message: `Error: ${err.message}`, timestamp: new Date() });
+    showValidationMsg(`✗ Error: ${err.message}`, true);
+    btn.textContent = '✗ Failed';
   }
 
   setTimeout(() => {
-    btn.textContent = 'Save Model';
+    btn.textContent = '💾 Save Configuration';
     btn.disabled = false;
-  }, 2000);
+  }, 2500);
 });
 
 // Agent Control

@@ -992,11 +992,39 @@ export async function createGateway(config: Config): Promise<Gateway> {
     return env;
   };
 
+  /** Mask an API key for safe display: show first 8 and last 4 chars. */
+  const maskKey = (key: string): string => {
+    if (!key || key.length < 16) return key ? "••••••••" : "";
+    return key.substring(0, 8) + "••••" + key.substring(key.length - 4);
+  };
+
+  /**
+   * Helper: set or update a single key=value inside the .env file content.
+   * Handles commented-out lines (# KEY=...) by uncommenting them.
+   */
+  const upsertEnvVar = (content: string, key: string, value: string): string => {
+    // Pattern for active line
+    const activeRe = new RegExp(`^${key}=.*`, "m");
+    // Pattern for commented line
+    const commentRe = new RegExp(`^#\\s*${key}=.*`, "m");
+
+    if (activeRe.test(content)) {
+      return content.replace(activeRe, `${key}=${value}`);
+    } else if (commentRe.test(content)) {
+      return content.replace(commentRe, `${key}=${value}`);
+    } else {
+      // Append
+      return content.trimEnd() + `\n${key}=${value}\n`;
+    }
+  };
+
   // Available model providers and their models
   // Model IDs must match what the agent runtime expects
-  const MODEL_OPTIONS = {
+  const MODEL_OPTIONS: Record<string, { name: string; needsBaseUrl?: boolean; needsApiKey?: boolean; defaultBaseUrl?: string; keyEnvVar?: string; models: { id: string; name: string }[] }> = {
     openrouter: {
       name: "OpenRouter",
+      needsApiKey: true,
+      keyEnvVar: "OPENROUTER_API_KEY",
       models: [
         { id: "openrouter/free", name: "OpenRouter Free" },
         { id: "anthropic/claude-opus-4.5", name: "Claude Opus 4.5" },
@@ -1009,12 +1037,44 @@ export async function createGateway(config: Config): Promise<Gateway> {
         { id: "x-ai/grok-4.1-fast", name: "Grok 4.1 Fast" },
         { id: "x-ai/grok-code-fast-1", name: "Grok Code Fast 1" },
         { id: "qwen/qwen-2.5-coder-32b-instruct", name: "Qwen2.5 Coder 32B" },
+        { id: "qwen/qwen3-coder-480b-a35b-instruct", name: "Qwen3 Coder 480B" },
         { id: "moonshotai/kimi-k2.5", name: "Kimi K2.5" },
         { id: "moonshotai/kimi-k2-thinking", name: "Kimi K2 Thinking" },
       ],
     },
+    custom: {
+      name: "Custom / NVIDIA / OpenAI-Compatible",
+      needsBaseUrl: true,
+      needsApiKey: true,
+      defaultBaseUrl: "https://integrate.api.nvidia.com/v1",
+      keyEnvVar: "AG3NT_CUSTOM_API_KEY",
+      models: [
+        { id: "openai/gpt-oss-120b", name: "GPT-OSS 120B (NVIDIA)" },
+        { id: "qwen/qwen3-coder-480b-a35b-instruct", name: "Qwen3 Coder 480B" },
+        { id: "nvidia/llama-3.1-nemotron-70b-instruct", name: "Llama 3.1 Nemotron 70B" },
+        { id: "deepseek-ai/deepseek-r1", name: "DeepSeek R1" },
+        { id: "meta/llama-3.3-70b-instruct", name: "Llama 3.3 70B" },
+      ],
+    },
+    ollama: {
+      name: "Ollama (Local)",
+      needsBaseUrl: true,
+      needsApiKey: false,
+      defaultBaseUrl: "http://localhost:11434/v1",
+      models: [
+        { id: "llama3.3", name: "Llama 3.3" },
+        { id: "qwen2.5-coder:32b", name: "Qwen2.5 Coder 32B" },
+        { id: "deepseek-r1:32b", name: "DeepSeek R1 32B" },
+        { id: "codellama:34b", name: "Code Llama 34B" },
+        { id: "mistral:latest", name: "Mistral Latest" },
+        { id: "gemma2:27b", name: "Gemma 2 27B" },
+        { id: "phi3:14b", name: "Phi-3 14B" },
+      ],
+    },
     kimi: {
       name: "Kimi (Direct)",
+      needsApiKey: true,
+      keyEnvVar: "KIMI_API_KEY",
       models: [
         { id: "moonshot-v1-128k", name: "Moonshot V1 128K" },
         { id: "moonshot-v1-32k", name: "Moonshot V1 32K" },
@@ -1024,6 +1084,8 @@ export async function createGateway(config: Config): Promise<Gateway> {
     },
     openai: {
       name: "OpenAI (Direct)",
+      needsApiKey: true,
+      keyEnvVar: "OPENAI_API_KEY",
       models: [
         { id: "gpt-4o", name: "GPT-4o" },
         { id: "gpt-4-turbo", name: "GPT-4 Turbo" },
@@ -1033,6 +1095,8 @@ export async function createGateway(config: Config): Promise<Gateway> {
     },
     anthropic: {
       name: "Anthropic (Direct)",
+      needsApiKey: true,
+      keyEnvVar: "ANTHROPIC_API_KEY",
       models: [
         { id: "claude-sonnet-4-5-20250929", name: "Claude Sonnet 4.5" },
         { id: "claude-3-opus-20240229", name: "Claude 3 Opus" },
@@ -1041,30 +1105,69 @@ export async function createGateway(config: Config): Promise<Gateway> {
     },
     google: {
       name: "Google (Direct)",
+      needsApiKey: true,
+      keyEnvVar: "GOOGLE_API_KEY",
       models: [
         { id: "gemini-pro", name: "Gemini Pro" },
         { id: "gemini-pro-1.5", name: "Gemini Pro 1.5" },
       ],
     },
+    groq: {
+      name: "Groq",
+      needsApiKey: true,
+      keyEnvVar: "GROQ_API_KEY",
+      models: [
+        { id: "llama-3.3-70b-versatile", name: "Llama 3.3 70B" },
+        { id: "mixtral-8x7b-32768", name: "Mixtral 8x7B" },
+        { id: "gemma2-9b-it", name: "Gemma 2 9B" },
+      ],
+    },
   };
 
+  /**
+   * Build a full model-config snapshot by reading the .env file.
+   * Returns provider, model, base URL, masked API key, temperature,
+   * max_tokens, and the full options catalog.
+   */
   function getModelConfigSnapshot() {
     const envPath = getEnvPath();
+    const defaults = {
+      provider: "openrouter",
+      model: "moonshotai/kimi-k2-thinking",
+      baseUrl: "",
+      apiKeyMasked: "",
+      apiKeySet: false,
+      customModelName: "",
+      temperature: 0.7,
+      maxTokens: 4096,
+      options: MODEL_OPTIONS,
+    };
 
-    if (!fs.existsSync(envPath)) {
-      return {
-        provider: "openrouter",
-        model: "moonshotai/kimi-k2-thinking",
-        options: MODEL_OPTIONS,
-      };
-    }
+    if (!fs.existsSync(envPath)) return defaults;
 
     const content = fs.readFileSync(envPath, "utf-8");
     const env = parseEnvFile(content);
 
+    const provider = env.AG3NT_MODEL_PROVIDER || defaults.provider;
+    const providerCfg = MODEL_OPTIONS[provider];
+
+    // Determine the API key for the active provider
+    let rawKey = "";
+    if (provider === "custom") {
+      rawKey = env.AG3NT_CUSTOM_API_KEY || "";
+    } else if (providerCfg?.keyEnvVar) {
+      rawKey = env[providerCfg.keyEnvVar] || "";
+    }
+
     return {
-      provider: env.AG3NT_MODEL_PROVIDER || "openrouter",
-      model: env.AG3NT_MODEL_NAME || "moonshotai/kimi-k2-thinking",
+      provider,
+      model: env.AG3NT_MODEL_NAME || defaults.model,
+      baseUrl: env.AG3NT_CUSTOM_MODEL_URL || env.OPENAI_BASE_URL || "",
+      apiKeyMasked: maskKey(rawKey),
+      apiKeySet: rawKey.length > 0,
+      customModelName: env.AG3NT_CUSTOM_MODEL_NAME || "",
+      temperature: parseFloat(env.AG3NT_MODEL_TEMPERATURE || "") || defaults.temperature,
+      maxTokens: parseInt(env.AG3NT_MODEL_MAX_TOKENS || "", 10) || defaults.maxTokens,
       options: MODEL_OPTIONS,
     };
   }
@@ -1075,6 +1178,192 @@ export async function createGateway(config: Config): Promise<Gateway> {
       res.json({ ok: true, ...getModelConfigSnapshot() });
     } catch (err) {
       gatewayLogs.error("Model", `Failed to get model config: ${err}`);
+      sendError(res, err instanceof Error ? err.message : String(err));
+    }
+  });
+
+  // Update model configuration (full payload)
+  app.post(`${config.gateway.httpPath}/model/config`, (req, res) => {
+    try {
+      const { provider, model, apiKey, baseUrl, customModelName, temperature, maxTokens } = req.body;
+
+      // --- Validation ---
+      if (!provider) {
+        sendError(res, "Provider is required", 400);
+        return;
+      }
+      if (!MODEL_OPTIONS[provider]) {
+        sendError(res, `Unknown provider '${provider}'. Valid: ${Object.keys(MODEL_OPTIONS).join(", ")}`, 400);
+        return;
+      }
+      if (!model && !customModelName) {
+        sendError(res, "A model name is required (select from list or type a custom name)", 400);
+        return;
+      }
+
+      const providerCfg = MODEL_OPTIONS[provider];
+
+      // Validate API key requirement
+      if (providerCfg.needsApiKey && apiKey !== undefined && apiKey !== null) {
+        // Only validate if a new key is provided (empty string = keep existing)
+        if (typeof apiKey === "string" && apiKey.length > 0 && apiKey.length < 8) {
+          sendError(res, "API key looks too short — double-check it", 400);
+          return;
+        }
+      }
+
+      // Validate base URL format when provided
+      if (baseUrl && providerCfg.needsBaseUrl) {
+        try {
+          new URL(baseUrl);
+        } catch {
+          sendError(res, "Base URL is not a valid URL", 400);
+          return;
+        }
+      }
+
+      // Validate temperature
+      if (temperature !== undefined && temperature !== null) {
+        const t = parseFloat(temperature);
+        if (isNaN(t) || t < 0 || t > 2) {
+          sendError(res, "Temperature must be between 0 and 2", 400);
+          return;
+        }
+      }
+
+      // Validate max_tokens
+      if (maxTokens !== undefined && maxTokens !== null) {
+        const m = parseInt(maxTokens, 10);
+        if (isNaN(m) || m < 1 || m > 128000) {
+          sendError(res, "Max tokens must be between 1 and 128000", 400);
+          return;
+        }
+      }
+
+      // --- Persist to .env ---
+      const envPath = getEnvPath();
+      let content = fs.existsSync(envPath) ? fs.readFileSync(envPath, "utf-8") : "";
+
+      const effectiveModel = customModelName || model;
+
+      content = upsertEnvVar(content, "AG3NT_MODEL_PROVIDER", provider);
+      content = upsertEnvVar(content, "AG3NT_MODEL_NAME", effectiveModel);
+
+      if (temperature !== undefined && temperature !== null) {
+        content = upsertEnvVar(content, "AG3NT_MODEL_TEMPERATURE", String(temperature));
+      }
+      if (maxTokens !== undefined && maxTokens !== null) {
+        content = upsertEnvVar(content, "AG3NT_MODEL_MAX_TOKENS", String(maxTokens));
+      }
+
+      // Provider-specific persistence
+      if (provider === "custom") {
+        if (baseUrl) {
+          content = upsertEnvVar(content, "AG3NT_CUSTOM_MODEL_URL", baseUrl);
+          content = upsertEnvVar(content, "OPENAI_BASE_URL", baseUrl);
+        }
+        content = upsertEnvVar(content, "AG3NT_CUSTOM_MODEL_NAME", effectiveModel);
+        content = upsertEnvVar(content, "OPENAI_MODEL", effectiveModel);
+        if (apiKey) {
+          content = upsertEnvVar(content, "AG3NT_CUSTOM_API_KEY", apiKey);
+        }
+      } else if (provider === "ollama") {
+        if (baseUrl) {
+          content = upsertEnvVar(content, "AG3NT_CUSTOM_MODEL_URL", baseUrl);
+          content = upsertEnvVar(content, "OPENAI_BASE_URL", baseUrl);
+        }
+      } else {
+        // Named provider — store their API key under the correct env var
+        if (apiKey && providerCfg.keyEnvVar) {
+          content = upsertEnvVar(content, providerCfg.keyEnvVar, apiKey);
+        }
+      }
+
+      fs.writeFileSync(envPath, content);
+
+      gatewayLogs.info("Model", `Model config saved: provider=${provider}  model=${effectiveModel}`);
+      res.json({
+        ok: true,
+        message: "Configuration saved to .env. Restart the agent worker to apply changes.",
+        provider,
+        model: effectiveModel,
+      });
+    } catch (err) {
+      gatewayLogs.error("Model", `Failed to update model config: ${err}`);
+      sendError(res, err instanceof Error ? err.message : String(err));
+    }
+  });
+
+  // Validate an API key by making a lightweight test call
+  app.post(`${config.gateway.httpPath}/model/validate`, async (req, res) => {
+    try {
+      const { provider, apiKey, baseUrl, model } = req.body;
+      if (!provider) {
+        sendError(res, "Provider is required", 400);
+        return;
+      }
+
+      const providerCfg = MODEL_OPTIONS[provider];
+      if (!providerCfg) {
+        sendError(res, "Unknown provider", 400);
+        return;
+      }
+
+      // Determine endpoint URL
+      let testUrl = "";
+      if (provider === "custom" || provider === "ollama") {
+        testUrl = (baseUrl || providerCfg.defaultBaseUrl || "") + "/models";
+      } else if (provider === "openrouter") {
+        testUrl = "https://openrouter.ai/api/v1/models";
+      } else if (provider === "openai") {
+        testUrl = "https://api.openai.com/v1/models";
+      } else if (provider === "anthropic") {
+        // Anthropic doesn't have a /models endpoint, just check the key format
+        if (apiKey && apiKey.startsWith("sk-ant-")) {
+          res.json({ ok: true, valid: true, message: "Anthropic key format looks correct" });
+        } else {
+          res.json({ ok: true, valid: false, message: "Anthropic keys typically start with sk-ant-" });
+        }
+        return;
+      } else if (provider === "google") {
+        res.json({ ok: true, valid: !!apiKey, message: apiKey ? "Google key provided" : "No key" });
+        return;
+      } else if (provider === "groq") {
+        testUrl = "https://api.groq.com/openai/v1/models";
+      } else {
+        res.json({ ok: true, valid: !!apiKey, message: "Cannot auto-validate this provider" });
+        return;
+      }
+
+      if (!testUrl) {
+        res.json({ ok: true, valid: false, message: "No endpoint URL to validate against" });
+        return;
+      }
+
+      const headers: Record<string, string> = { "Accept": "application/json" };
+      if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
+
+      try {
+        const response = await fetch(testUrl, { headers, signal: controller.signal });
+        clearTimeout(timeout);
+
+        if (response.ok) {
+          res.json({ ok: true, valid: true, message: `Connected to ${providerCfg.name} successfully` });
+        } else {
+          const body = await response.text().catch(() => "");
+          res.json({ ok: true, valid: false, message: `${providerCfg.name} returned ${response.status}: ${body.slice(0, 200)}` });
+        }
+      } catch (fetchErr: any) {
+        clearTimeout(timeout);
+        const msg = fetchErr?.name === "AbortError"
+          ? "Connection timed out (8s)"
+          : fetchErr?.message || String(fetchErr);
+        res.json({ ok: true, valid: false, message: `Connection failed: ${msg}` });
+      }
+    } catch (err) {
       sendError(res, err instanceof Error ? err.message : String(err));
     }
   });

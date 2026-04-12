@@ -106,25 +106,64 @@
         <!-- Configuration Row -->
         <div class="dash-config-row">
           <!-- Model Configuration -->
-          <div class="dash-config-card">
+          <div class="dash-config-card" style="grid-column: 1 / -1;">
             <div class="dash-config-header">
               <h4>Model Configuration</h4>
               <span class="dash-config-badge" id="model-current">—</span>
             </div>
             <div class="dash-config-body">
-              <div class="dash-config-field">
-                <label for="model-provider">Provider</label>
-                <select id="model-provider">
-                  <option value="">Loading...</option>
-                </select>
+              <!-- Row 1: Provider + Model -->
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
+                <div class="dash-config-field">
+                  <label for="model-provider">Provider</label>
+                  <select id="model-provider">
+                    <option value="">Loading...</option>
+                  </select>
+                </div>
+                <div class="dash-config-field">
+                  <label for="model-name">Model</label>
+                  <select id="model-name">
+                    <option value="">Select provider first</option>
+                  </select>
+                </div>
               </div>
-              <div class="dash-config-field">
-                <label for="model-name">Model</label>
-                <select id="model-name">
-                  <option value="">Select provider first</option>
-                </select>
+              <!-- Row 2: Custom Model + Base URL (shown conditionally) -->
+              <div class="dash-config-field" id="custom-model-wrap" style="display:none;">
+                <label for="custom-model-name">Custom Model Name <small style="opacity:0.5">(overrides dropdown)</small></label>
+                <input type="text" id="custom-model-name" placeholder="e.g. openai/gpt-oss-120b" style="width:100%;padding:0.35rem 0.5rem;background:var(--surface-alt,#1a1a2e);border:1px solid var(--border,#333);color:var(--fg,#eee);border-radius:4px;font-family:monospace;font-size:0.8rem;">
               </div>
-              <button class="btn btn-sm" id="save-model">Save</button>
+              <div class="dash-config-field" id="base-url-wrap" style="display:none;">
+                <label for="model-base-url">Base URL</label>
+                <input type="url" id="model-base-url" placeholder="https://integrate.api.nvidia.com/v1" style="width:100%;padding:0.35rem 0.5rem;background:var(--surface-alt,#1a1a2e);border:1px solid var(--border,#333);color:var(--fg,#eee);border-radius:4px;font-family:monospace;font-size:0.8rem;">
+              </div>
+              <!-- Row 3: API Key -->
+              <div class="dash-config-field" id="api-key-wrap" style="display:none;">
+                <label for="model-api-key">API Key <small id="api-key-status" style="opacity:0.6"></small></label>
+                <div style="display:flex;gap:0.35rem;">
+                  <input type="password" id="model-api-key" placeholder="Paste new key (leave blank to keep existing)" style="flex:1;padding:0.35rem 0.5rem;background:var(--surface-alt,#1a1a2e);border:1px solid var(--border,#333);color:var(--fg,#eee);border-radius:4px;font-family:monospace;font-size:0.8rem;">
+                  <button class="btn btn-sm btn-ghost" id="toggle-key-visibility" title="Show/hide key" style="padding:0.35rem 0.5rem;font-size:0.75rem;">👁</button>
+                </div>
+              </div>
+              <!-- Row 4: Temperature + Max Tokens -->
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
+                <div class="dash-config-field">
+                  <label for="model-temperature">Temperature <small style="opacity:0.5">0–2</small></label>
+                  <input type="number" id="model-temperature" value="0.7" min="0" max="2" step="0.1" style="width:100%;padding:0.35rem 0.5rem;background:var(--surface-alt,#1a1a2e);border:1px solid var(--border,#333);color:var(--fg,#eee);border-radius:4px;font-size:0.8rem;">
+                </div>
+                <div class="dash-config-field">
+                  <label for="model-max-tokens">Max Tokens</label>
+                  <input type="number" id="model-max-tokens" value="4096" min="1" max="128000" step="256" style="width:100%;padding:0.35rem 0.5rem;background:var(--surface-alt,#1a1a2e);border:1px solid var(--border,#333);color:var(--fg,#eee);border-radius:4px;font-size:0.8rem;">
+                </div>
+              </div>
+              <!-- Row 5: Validation message -->
+              <div class="dash-config-field" id="validation-msg-wrap" style="display:none;">
+                <div id="validation-msg" style="padding:0.4rem 0.6rem;border-radius:4px;font-size:0.75rem;"></div>
+              </div>
+              <!-- Row 6: Actions -->
+              <div style="display:flex;gap:0.5rem;margin-top:0.25rem;">
+                <button class="btn btn-sm" id="validate-model" title="Test API key against provider">⚡ Validate</button>
+                <button class="btn btn-sm btn-accent" id="save-model">💾 Save Configuration</button>
+              </div>
             </div>
           </div>
 
