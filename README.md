@@ -79,9 +79,9 @@ We provide an entirely unified setup script for Windows environments that compil
 ### ▶️ 1-Click Environment Boot (Recommended)
 ```powershell
 # Drops you right into the AG3NT UI, Agent Engine, and Gateway simultaneously:
-.\start.ps1
+powershell -ExecutionPolicy Bypass -File .\start.ps1
 ```
-Need to cleanly stop everything? Just run `.\stop.ps1`.
+Need to cleanly stop everything? Just run `powershell -ExecutionPolicy Bypass -File .\stop.ps1`.
 
 ### 🛠️ Manual Bootstrapping
 

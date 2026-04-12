@@ -41,7 +41,7 @@ Write-Host "[4/5] Building AG3NT Workspace..." -ForegroundColor Cyan
 pnpm build
 
 Write-Host "[5/5] Setup complete!" -ForegroundColor Green
-Write-Host "To start all components easily: .\start.ps1" -ForegroundColor Cyan
+Write-Host "To start all components easily: powershell -ExecutionPolicy Bypass -File .\start.ps1" -ForegroundColor Cyan
 Write-Host "For manual startup or individual services:" -ForegroundColor Cyan
 Write-Host " - Web UI Server: pnpm dev" -ForegroundColor Cyan
 Write-Host " - Python agent: .\apps\agent\.venv\Scripts\Activate.ps1; cd apps\agent; python -m uvicorn ag3nt_agent.worker:app --port 18790" -ForegroundColor Cyan

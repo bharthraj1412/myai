@@ -243,7 +243,7 @@ echo "Build complete!"
 
 ```powershell
 # From repo root
-.\start.ps1
+powershell -ExecutionPolicy Bypass -File .\start.ps1
 
 # This script starts:
 # 1. Gateway (port 18789)
