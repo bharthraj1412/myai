@@ -38,7 +38,7 @@
     "@types/node": "^22.2.0",
     "@types/node-schedule": "^2.1.8",
     "@types/node-telegram-bot-api": "^0.64.13",
-    "@types/supertest": "^6.0.3",
+    "@types/supertest": "^7.2.0",
     "@types/ws": "^8.5.10",
     "@vitest/coverage-v8": "^2.1.8",
     "@vitest/ui": "^2.1.8",
