@@ -648,7 +648,7 @@ function Stop-AG3NT {
 
 # Register exit handler
 $null = Register-EngineEvent -SourceIdentifier PowerShell.Exiting -Action { Stop-AG3NT }
-[Console]::TreatControlCAsInput = $false
+try { [Console]::TreatControlCAsInput = $false } catch { <# non-interactive terminal #> }
 
 # ---------------------------------------------------------------------------
 # Main loop: monitor processes, restart UI on failure
