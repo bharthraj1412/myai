@@ -1,11 +1,13 @@
-# AG3NT
-<img src=".github/images/AG3NT_header.png" alt="AG3NT" width="100%"/>
+# myai
+<img src=".github/images/AG3NT_header.png" alt="myai" width="100%"/>
 
 
 
 
 
-Local-first personal AI agent platform built on DeepAgents with PAI-inspired architecture.
+`myai` is a local-first personal AI agent platform built on DeepAgents with PAI-inspired architecture.
+
+Repository: https://github.com/bharthraj1412/myai
 
 > **v2.0** — Rebuilt from the ground up using [Personal AI Infrastructure](https://github.com/danielmiessler/Personal_AI_Infrastructure) patterns: Algorithm Engine, Memory System, Hook Lifecycle, Agent Personalities, and TELOS goal alignment.
 
