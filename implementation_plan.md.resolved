@@ -1,0 +1,437 @@
+# AG3NT v2.0 — Ground-Up Rebuild Using PAI Architecture
+
+> **Goal:** Rebuild AG3NT from scratch, adopting the architecture, patterns, and systems from the Personal AI Infrastructure (PAI) project while preserving AG3NT's unique value: local-first multi-model agent platform with Gateway + Agent Worker + Web UI.
+
+---
+
+## Background & Analysis
+
+### What AG3NT Has Today
+| Component | Tech | Status |
+|-----------|------|--------|
+| **Gateway** | TypeScript/Express (port 18789) | Functional — HTTP/WS, session routing, channel adapters |
+| **Agent Worker** | Python/DeepAgents (port 18790) | Functional — 69 modules, LLM inference, tool execution |
+| **Web UI** | Next.js/React/Tailwind (port 3000) | Functional — chat, artifacts, skills browser |
+| **TUI** | TypeScript | Basic terminal client |
+| **Skills** | 10 bundled (flat format) | Basic — no workflow routing, no USE WHEN triggers |
+| **Memory** | SQLite sessions only | Minimal — no learning, no structured capture |
+| **Security** | HITL + DM pairing | Basic approval flows |
+| **Integrations** | 370+ community modules | Extensive but unstructured |
+
+### What PAI Brings (To Adopt)
+| System | Description | AG3NT Benefit |
+|--------|-------------|---------------|
+| **Skill System** | SKILL.md with YAML frontmatter, USE WHEN triggers, workflow routing, TitleCase naming | Structured, self-activating skills that route intelligently |
+| **Memory System** | WORK/, LEARNING/, RESEARCH/, SECURITY/, STATE/ — 7-directory architecture | Persistent learning that compounds across sessions |
+| **Hook System** | 21 event-driven hooks across 7 lifecycle events | Automated capture, voice, security, session management |
+| **Algorithm** | 7-phase (Observe→Think→Plan→Build→Execute→Verify→Learn) with ISC criteria | Systematic task execution with verifiable outcomes |
+| **Agent Personalities** | 14 specialized agents with unique voices and behaviors | Specialized task delegation (Engineer, Architect, Researcher) |
+| **TELOS** | 10 goal files (MISSION, GOALS, PROJECTS, BELIEFS, etc.) | User-centric goal understanding |
+| **Voice/Notifications** | ElevenLabs TTS, ntfy push, Discord alerts | Multi-channel notifications with voice feedback |
+| **User/System Separation** | USER/ for customizations, SYSTEM/ for infrastructure | Upgrade-safe personal configurations |
+| **Security Architecture** | SecurityValidator hooks, AllowList, sensitive path protection | Production-grade security without blocking workflows |
+| **Settings.json** | Single source of truth for all configuration | Centralized, programmatic configuration |
+
+---
+
+## User Review Required
+
+> [!IMPORTANT]
+> **This is a major rebuild** — the project structure will change significantly. All existing AG3NT functionality will be preserved but reorganized.
+
+> [!WARNING]
+> **Breaking changes to existing AG3NT users:**
+> - Skill format changes (old skills must be migrated to SKILL.md format)
+> - New directory structure (MEMORY/, hooks/, agents/)
+> - Config format changes (settings.json replaces scattered config)
+> - Gateway API endpoints may change to support new systems
+
+> [!CAUTION]
+> **Decision needed:** Should we keep the Python Agent Worker as-is and add new systems around it, or should we migrate some Python modules to TypeScript for consistency with PAI's Bun/TS approach? **Recommendation:** Keep Python worker for LLM inference (it's working) but add a new TypeScript layer for Hook/Memory/Algorithm systems that runs alongside it.
+
+---
+
+## Proposed Changes
+
+The rebuild is organized into **6 phases**, each building on the previous:
+
+---
+
+### Phase 1: Foundation — Configuration & Directory Structure
+
+Establish the PAI-inspired directory structure and centralized configuration.
+
+#### [NEW] [settings.json](file:///g:/apexai/AG3NT-main/config/settings.json)
+- Central configuration file modeled after PAI's `settings.json`
+- Contains: `daidentity` (AG3NT name, color, voice), `principal` (user info), `env`, `permissions`, `hooks` config
+- Single source of truth replacing scattered `.env` and `config.yaml` files
+
+#### [NEW] MEMORY directory tree
+```
+AG3NT-main/
+├── MEMORY/
+│   ├── WORK/              # Active task tracking with PRD.md files
+│   ├── LEARNING/          # Categorized learnings
+│   │   ├── SYSTEM/        # Infrastructure learnings
+│   │   ├── ALGORITHM/     # Task execution learnings
+│   │   ├── FAILURES/      # Full context failure dumps
+│   │   ├── SYNTHESIS/     # Aggregated pattern analysis
+│   │   ├── REFLECTIONS/   # Algorithm performance reflections
+│   │   └── SIGNALS/       # User satisfaction ratings
+│   ├── RESEARCH/          # Agent output captures
+│   ├── SECURITY/          # Security audit events
+│   ├── STATE/             # Runtime state (ephemeral)
+│   │   ├── algorithms/    # Per-session algorithm state
+│   │   ├── events.jsonl   # Unified event log
+│   │   └── current-work.json
+│   └── README.md
+```
+
+#### [NEW] USER directory (upgrade-safe customizations)
+```
+AG3NT-main/
+├── USER/
+│   ├── TELOS/             # User goal files
+│   │   ├── MISSION.md
+│   │   ├── GOALS.md
+│   │   ├── PROJECTS.md
+│   │   ├── BELIEFS.md
+│   │   ├── MODELS.md
+│   │   ├── STRATEGIES.md
+│   │   ├── NARRATIVES.md
+│   │   ├── LEARNED.md
+│   │   ├── CHALLENGES.md
+│   │   └── IDEAS.md
+│   ├── PREFERENCES.md     # User preferences
+│   ├── CONTACTS.md        # Contact info
+│   ├── TECHSTACK.md       # Tech preferences
+│   └── SKILLCUSTOMIZATIONS/  # Per-skill overrides
+```
+
+#### [MODIFY] [.env.example](file:///g:/apexai/AG3NT-main/.env.example)
+- Add new env vars: `AG3NT_DIR`, `AG3NT_MEMORY_DIR`, `AG3NT_VOICE_ENABLED`, `AG3NT_VOICE_PROVIDER`
+
+---
+
+### Phase 2: Skill System Overhaul
+
+Migrate all 10 skills to PAI's canonical SKILL.md format.
+
+#### [MODIFY] All 10 skill directories under `skills/`
+Restructure each to follow PAI's canonical format:
+
+```
+skills/
+├── AppLauncher/           # Renamed from app-launcher (TitleCase)
+│   ├── SKILL.md           # YAML frontmatter + USE WHEN + workflow routing
+│   ├── Workflows/
+│   │   ├── Launch.md
+│   │   └── List.md
+│   └── Tools/
+│       └── Launch.ts
+├── DailyBriefing/         # Renamed from daily-briefing
+├── DeepReasoning/         # Renamed from deep-reasoning
+├── FileManager/           # Renamed from file-manager
+├── Heartbeat/             # Renamed from heartbeat
+├── SystemInfo/            # Renamed from system-info
+├── VoiceTTS/              # Renamed from voice-tts
+├── WebResearch/           # Renamed from web-research
+├── CameraCapture/         # Renamed from camera-capture
+├── BrowserControl/        # NEW - browser automation skill
+├── _SYSTEM/               # NEW - system management (personal, never shared)
+└── README.md              # Updated skill development guide
+```
+
+**Each `SKILL.md` follows PAI's canonical format:**
+```yaml
+---
+name: WebResearch
+description: Web search and scraping. USE WHEN user wants to search the web, find information online, scrape websites, extract content from URLs, OR do internet research.
+---
+
+# WebResearch
+
+Web search and content extraction skill.
+
+## Workflow Routing
+
+| Workflow | Trigger | File |
+|----------|---------|------|
+| **Search** | "search for", "find information" | `Workflows/Search.md` |
+| **Scrape** | "scrape", "extract from URL" | `Workflows/Scrape.md` |
+
+## Examples
+
+**Example 1: Web search**
+```
+User: "Search for the latest AI news"
+→ Invokes Search workflow
+→ Performs web search via configured provider
+→ Returns formatted results with sources
+```
+```
+
+#### [NEW] [skills/README.md](file:///g:/apexai/AG3NT-main/skills/README.md)
+- Comprehensive skill development guide based on PAI's SKILLSYSTEM.md
+- Documents SKILL.md format, TitleCase naming, USE WHEN triggers
+- Includes canonicalization checklist
+
+---
+
+### Phase 3: Hook System Implementation
+
+Implement PAI's event-driven hook architecture adapted for AG3NT's Gateway.
+
+#### [NEW] `hooks/` directory at project root
+```
+hooks/
+├── lib/                   # Shared hook utilities
+│   ├── hook-io.ts         # Stdin reading, JSON parsing
+│   ├── identity.ts        # Identity module (getDAName, getPrincipal)
+│   ├── learning-utils.ts  # Learning categorization
+│   ├── time.ts            # PST timestamps, date utilities
+│   └── event-emitter.ts   # Unified event log writer
+├── handlers/              # Reusable handler functions
+│   ├── VoiceNotification.ts
+│   ├── TabState.ts
+│   └── DocIntegrity.ts
+├── SecurityValidator.hook.ts     # Pre-tool validation
+├── RatingCapture.hook.ts         # Sentiment & explicit ratings
+├── SessionAutoName.hook.ts       # Auto-name sessions
+├── WorkCompletionLearning.hook.ts # Learning capture on session end
+├── SessionCleanup.hook.ts        # Cleanup on session end
+├── LoadContext.hook.ts            # Context injection on session start
+├── VoiceCompletion.hook.ts        # Voice TTS on task completion
+└── README.md
+```
+
+#### [MODIFY] [apps/gateway/src/index.ts](file:///g:/apexai/AG3NT-main/apps/gateway/src/index.ts)
+- Add hook lifecycle manager — fires hooks at: SessionStart, SessionEnd, PreToolUse, PostToolUse, UserPromptSubmit, Stop
+- Hook events are emitted on the Gateway's WebSocket event bus
+- Hooks run asynchronously and fail gracefully (never block the gateway)
+
+#### [NEW] `apps/gateway/src/hooks/hook-manager.ts`
+- Central hook orchestrator that reads `settings.json` hook config
+- Executes hooks as child processes (TypeScript files via `node --loader ts-node`)
+- Passes JSON on stdin (session_id, transcript_path, event data)
+- Handles timeouts (500ms default) and graceful failures
+
+---
+
+### Phase 4: Algorithm Engine (7-Phase Execution)
+
+Implement PAI's Algorithm as the core execution engine for complex tasks.
+
+#### [NEW] `apps/agent/ag3nt_agent/algorithm/`
+```
+algorithm/
+├── __init__.py
+├── engine.py              # Main Algorithm engine (7-phase orchestrator)
+├── phases.py              # Phase implementations (Observe→Learn)
+├── prd.py                 # PRD management (create, update, parse)
+├── isc.py                 # Ideal State Criteria (decomposition, splitting test)
+├── effort.py              # Effort level classification (Standard→Comprehensive)
+├── capability_selector.py # Skill/capability selection engine
+└── state.py               # Algorithm state persistence
+```
+
+#### [MODIFY] [apps/agent/ag3nt_agent/deepagents_runtime.py](file:///g:/apexai/AG3NT-main/apps/agent/ag3nt_agent/deepagents_runtime.py)
+- Integrate Algorithm engine as a middleware in the inference pipeline
+- Complex tasks automatically enter Algorithm mode
+- Simple tasks use existing direct inference (NATIVE mode)
+
+#### [MODIFY] [apps/agent/ag3nt_agent/worker.py](file:///g:/apexai/AG3NT-main/apps/agent/ag3nt_agent/worker.py)
+- Add `/api/algorithm/status` endpoint to expose current Algorithm phase
+- Add `/api/algorithm/prd` endpoint to serve current PRD state
+- Emit algorithm phase transitions as WebSocket events
+
+---
+
+### Phase 5: Agent Personality System & Memory Integration
+
+#### [NEW] `agents/` directory at project root
+```
+agents/
+├── Algorithm.md           # Meta-agent for Algorithm execution
+├── Architect.md           # System design specialist
+├── Engineer.md            # Code implementation specialist
+├── Designer.md            # UI/UX specialist
+├── Researcher.md          # Research and analysis
+├── QATester.md            # Quality assurance
+├── SecurityAnalyst.md     # Security specialist
+├── BrowserAgent.md        # Browser automation
+└── README.md
+```
+
+Each agent `.md` file contains:
+- **Personality traits** (humor, precision, directness, autonomy — 0-100 scales)
+- **Voice configuration** (voice ID for TTS)
+- **Specialization** rules and domain expertise
+- **Behavioral rules** (when to ask, when to act, communication style)
+
+#### [NEW] `apps/gateway/src/memory/`
+```
+memory/
+├── memory-manager.ts      # CRUD operations on MEMORY/ directories
+├── work-tracker.ts        # WORK/ directory management, PRD lifecycle
+├── learning-capture.ts    # LEARNING/ categorization and writing
+├── signals.ts             # ratings.jsonl management
+├── state-manager.ts       # STATE/ runtime data
+└── harvester.ts           # Session transcript harvesting
+```
+
+#### [MODIFY] [apps/agent/ag3nt_agent/memory_search.py](file:///g:/apexai/AG3NT-main/apps/agent/ag3nt_agent/memory_search.py)
+- Extend to search across MEMORY/LEARNING/, MEMORY/RESEARCH/, and MEMORY/WORK/
+- Add semantic search across memory stores
+
+---
+
+### Phase 6: Web UI Overhaul
+
+Rebuild the Next.js dashboard to surface all new systems.
+
+#### [MODIFY] [apps/ui/app/page.tsx](file:///g:/apexai/AG3NT-main/apps/ui/app/page.tsx)
+- New landing dashboard with:
+  - **Algorithm Status Panel** — real-time 7-phase progress with PRD/ISC status
+  - **Memory Overview** — recent learnings, work items, rating trends
+  - **Agent Roster** — available agents with personality previews
+  - **TELOS Summary** — user goals and active projects
+  - **System Health** — gateway, worker, voice server status
+
+#### [NEW] `apps/ui/components/algorithm/`
+```
+algorithm/
+├── AlgorithmPanel.tsx     # Main Algorithm status display
+├── PhaseIndicator.tsx     # 7-phase progress stepper
+├── ISCChecklist.tsx       # Interactive criteria checklist
+├── PRDViewer.tsx          # PRD document viewer
+└── EffortBadge.tsx        # Effort level indicator
+```
+
+#### [NEW] `apps/ui/components/memory/`
+```
+memory/
+├── MemoryDashboard.tsx    # Overview of memory system
+├── LearningFeed.tsx       # Recent learnings stream
+├── RatingChart.tsx        # Rating trends visualization
+├── WorkTimeline.tsx       # Work item lifecycle view
+└── ResearchArchive.tsx    # Research output browser
+```
+
+#### [NEW] `apps/ui/components/agents/`
+```
+agents/
+├── AgentRoster.tsx        # Agent cards with personality previews
+├── AgentDetail.tsx        # Full agent profile view
+├── AgentSpawner.tsx       # Create/configure agent instances
+└── AgentMonitor.tsx       # Track active agent tasks
+```
+
+#### [NEW] `apps/ui/components/telos/`
+```
+telos/
+├── TelosDashboard.tsx     # TELOS overview (mission, goals, projects)
+├── GoalTracker.tsx        # Goal progress tracking
+├── ProjectBoard.tsx       # Active projects kanban
+└── TelosEditor.tsx        # Edit TELOS files
+```
+
+#### [MODIFY] [apps/ui/app/globals.css](file:///g:/apexai/AG3NT-main/apps/ui/app/globals.css)
+- Premium dark theme with PAI-inspired design system
+- Glassmorphism panels, gradient accents, micro-animations
+- Color palette: Deep navy (#002B80), Electric blue (#3B82F6), Teal (#0D4F4F), Success green (#22C55E)
+
+---
+
+## New Project Structure (After Rebuild)
+
+```
+AG3NT-main/
+├── apps/
+│   ├── gateway/           # TypeScript Gateway (HTTP/WS) + Hook Manager
+│   ├── agent/             # Python Agent Worker + Algorithm Engine
+│   ├── ui/                # Next.js Dashboard (completely overhauled)
+│   └── tui/               # Terminal UI
+├── agents/                # NEW — Agent personality .md files (14 agents)
+├── hooks/                 # NEW — Event-driven lifecycle hooks
+│   ├── lib/               # Shared utilities
+│   ├── handlers/          # Reusable handlers
+│   └── *.hook.ts          # Individual hooks
+├── skills/                # OVERHAULED — TitleCase, SKILL.md format
+│   ├── AppLauncher/
+│   ├── WebResearch/
+│   ├── BrowserControl/
+│   └── ... (12+ skills)
+├── MEMORY/                # NEW — Persistent memory system
+│   ├── WORK/
+│   ├── LEARNING/
+│   ├── RESEARCH/
+│   ├── SECURITY/
+│   └── STATE/
+├── USER/                  # NEW — Upgrade-safe user customizations
+│   ├── TELOS/
+│   ├── PREFERENCES.md
+│   └── SKILLCUSTOMIZATIONS/
+├── config/
+│   ├── settings.json      # NEW — Single source of truth
+│   └── default-config.yaml
+├── community/             # Existing 370+ integrations (unchanged)
+├── packages/              # Shared utilities
+├── scripts/
+├── tests/
+├── docker-compose.yml
+├── start.ps1
+├── stop.ps1
+└── README.md              # Updated
+```
+
+---
+
+## Open Questions
+
+> [!IMPORTANT]
+> **Voice Provider:** PAI uses ElevenLabs for TTS. Should AG3NT also use ElevenLabs, or do you prefer a different/free TTS provider (e.g., Edge TTS, Google Cloud TTS, Piper)?
+
+> [!IMPORTANT]
+> **TELOS Pre-population:** Should we create a guided setup wizard that populates TELOS files (MISSION.md, GOALS.md, etc.) interactively on first run?
+
+> [!IMPORTANT]
+> **Existing AG3NT data:** Should we write a migration script that converts existing SQLite session data into the new MEMORY/ format?
+
+---
+
+## Verification Plan
+
+### Automated Tests
+1. **Skill System:** Validate all skills have valid SKILL.md with YAML frontmatter and USE WHEN triggers
+2. **Hook System:** Unit tests for each hook (stdin JSON → expected side effects)
+3. **Memory System:** Integration tests for MEMORY/ CRUD operations
+4. **Algorithm Engine:** Test each phase transition with mock PRDs
+5. **Gateway:** API tests for new hook/memory/algorithm endpoints
+6. **UI:** Playwright E2E tests for new dashboard panels
+
+### Manual Verification
+1. Run `start.ps1` — all services start cleanly
+2. Chat flow works end-to-end (UI → Gateway → Worker → response)
+3. Skills activate correctly from natural language triggers
+4. Memory captures learning after sessions
+5. Algorithm mode activates for complex tasks
+6. Agent personalities are selectable and have distinct behaviors
+7. UI dashboard shows real-time Algorithm/Memory/Agent status
+
+---
+
+## Execution Order
+
+| Phase | Duration | Dependencies |
+|-------|----------|-------------|
+| **Phase 1: Foundation** | ~2 hours | None |
+| **Phase 2: Skill System** | ~3 hours | Phase 1 |
+| **Phase 3: Hook System** | ~3 hours | Phase 1 |
+| **Phase 4: Algorithm Engine** | ~4 hours | Phase 1, 2 |
+| **Phase 5: Agents & Memory** | ~3 hours | Phase 1, 3 |
+| **Phase 6: UI Overhaul** | ~4 hours | Phase 1-5 |
+
+**Total estimated effort: ~19 hours of implementation**
+
+We will execute in order, with Phase 2 and Phase 3 running in parallel after Phase 1 completes.

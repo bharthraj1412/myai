@@ -1,0 +1,227 @@
+{
+  "$schema": "https://json.schemastore.org/ag3nt-settings.json",
+  "version": "2.0.0",
+  "env": {
+    "AG3NT_DIR": "${HOME}/.ag3nt",
+    "AG3NT_MEMORY_DIR": "${AG3NT_DIR}/MEMORY",
+    "AG3NT_VOICE_ENABLED": "false",
+    "AG3NT_VOICE_PROVIDER": "edge-tts",
+    "AG3NT_MODEL_PROVIDER": "openrouter",
+    "AG3NT_MODEL_NAME": "moonshotai/kimi-k2.5",
+    "AG3NT_GATEWAY_PORT": "18789",
+    "AG3NT_WORKER_PORT": "18790",
+    "AG3NT_UI_PORT": "3000",
+    "AG3NT_MAX_OUTPUT_TOKENS": "64000",
+    "AG3NT_BASH_TIMEOUT_MS": "600000"
+  },
+  "daidentity": {
+    "name": "AG3NT",
+    "fullName": "AG3NT Personal AI Agent",
+    "displayName": "AG3NT",
+    "color": "#3B82F6",
+    "voiceId": "",
+    "personality": {
+      "humor": 40,
+      "precision": 85,
+      "directness": 75,
+      "warmth": 60,
+      "autonomy": 70
+    }
+  },
+  "principal": {
+    "name": "",
+    "pronunciation": "",
+    "timezone": "Asia/Kolkata",
+    "temperatureUnit": "celsius"
+  },
+  "permissions": {
+    "allow": [
+      "Bash",
+      "Read",
+      "Write",
+      "Edit",
+      "Glob",
+      "Grep",
+      "WebFetch",
+      "WebSearch",
+      "Task",
+      "Skill",
+      "mcp__*"
+    ],
+    "deny": [],
+    "ask": [
+      "Bash(rm -rf /)",
+      "Bash(rm -rf ~)",
+      "Bash(rm -rf ~/.ag3nt)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Read(~/.ssh/id_*)",
+      "Read(~/.ssh/*.pem)",
+      "Read(~/.aws/credentials)",
+      "Write(~/.ag3nt/config/settings.json)",
+      "Edit(~/.ag3nt/config/settings.json)"
+    ],
+    "defaultMode": "default"
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${AG3NT_DIR}/hooks/LoadContext.hook.ts"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${AG3NT_DIR}/hooks/WorkCompletionLearning.hook.ts"
+          },
+          {
+            "type": "command",
+            "command": "${AG3NT_DIR}/hooks/SessionCleanup.hook.ts"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${AG3NT_DIR}/hooks/RatingCapture.hook.ts"
+          },
+          {
+            "type": "command",
+            "command": "${AG3NT_DIR}/hooks/SessionAutoName.hook.ts"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${AG3NT_DIR}/hooks/VoiceCompletion.hook.ts"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${AG3NT_DIR}/hooks/SecurityValidator.hook.ts"
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${AG3NT_DIR}/hooks/SecurityValidator.hook.ts"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${AG3NT_DIR}/hooks/SecurityValidator.hook.ts"
+          }
+        ]
+      },
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${AG3NT_DIR}/hooks/AgentExecutionGuard.hook.ts"
+          }
+        ]
+      },
+      {
+        "matcher": "Skill",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${AG3NT_DIR}/hooks/SkillGuard.hook.ts"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${AG3NT_DIR}/hooks/PRDSync.hook.ts"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${AG3NT_DIR}/hooks/PRDSync.hook.ts"
+          }
+        ]
+      }
+    ]
+  },
+  "algorithm": {
+    "version": "3.7.0",
+    "defaultEffort": "standard",
+    "effortLevels": {
+      "standard": { "budget": "2min", "iscRange": [8, 16], "minCapabilities": 1 },
+      "extended": { "budget": "8min", "iscRange": [16, 32], "minCapabilities": 3 },
+      "advanced": { "budget": "16min", "iscRange": [24, 48], "minCapabilities": 4 },
+      "deep": { "budget": "32min", "iscRange": [40, 80], "minCapabilities": 6 },
+      "comprehensive": { "budget": "120min", "iscRange": [64, 150], "minCapabilities": 8 }
+    },
+    "phases": ["observe", "think", "plan", "build", "execute", "verify", "learn"]
+  },
+  "notifications": {
+    "voice": {
+      "enabled": false,
+      "provider": "edge-tts",
+      "voiceId": "",
+      "serverPort": 8888
+    },
+    "push": {
+      "enabled": false,
+      "provider": "ntfy",
+      "topic": ""
+    },
+    "discord": {
+      "enabled": false,
+      "webhookUrl": ""
+    }
+  },
+  "security": {
+    "sensitivePatterns": [
+      "*.pem", "*.key", "id_rsa*", "id_ed25519*",
+      ".env", ".env.*", "credentials*", "secrets*"
+    ],
+    "protectedDirectories": [
+      "USER/TELOS",
+      "USER/WORK",
+      "MEMORY/SECURITY"
+    ],
+    "dangerousCommands": [
+      "rm -rf /", "rm -rf ~", "mkfs", "dd if=/dev/zero",
+      "chmod 777", "git push --force"
+    ]
+  }
+}

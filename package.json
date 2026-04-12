@@ -1,0 +1,13 @@
+{
+  "name": "ag3nt",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm -r dev",
+    "build": "pnpm -r build",
+    "build:assistant:exe": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/build-assistant-exe.ps1",
+    "build:assistant:setup": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/build-assistant-installer.ps1",
+    "assistant:install": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"if (-not (Test-Path ./dist/AG3NT-Assistant-Setup.exe)) { Write-Host 'Setup EXE not found. Run pnpm run build:assistant:setup first.'; exit 1 }; ./dist/AG3NT-Assistant-Setup.exe\"",
+    "assistant:uninstall": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"if (-not (Test-Path ./dist/AG3NT-Assistant-Setup.exe)) { Write-Host 'Setup EXE not found. Run pnpm run build:assistant:setup first.'; exit 1 }; ./dist/AG3NT-Assistant-Setup.exe --silent --uninstall\""
+  }
+}
