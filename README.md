@@ -1,217 +1,150 @@
-# myai
-<img src=".github/images/AG3NT_header.png" alt="myai" width="100%"/>
+<div align="center">
+  <img src=".github/images/AG3NT_header.png" alt="AG3NT AI" width="100%"/>
 
+  # AG3NT: Personal AI Infrastructure
+  
+  **Your Local-First, Highly Extensible Autonomous AI Platform**
 
+  [![GitHub Repo](https://img.shields.io/badge/Repository-bharthraj1412%2Fmyai-blue?style=flat-square&logo=github)](https://github.com/bharthraj1412/myai)
+  [![License](https://img.shields.io/badge/License-MIT-green.svg?style=flat-square)](LICENSE)
+</div>
 
+---
 
+**myai (AG3NT)** is a production-grade, local-first personal AI assistant ecosystem. Born from a fusion of **DeepAgents** and the widely acclaimed **Personal AI Infrastructure (PAI)** patterns, it is built to be your intelligent digital twin—understanding your workflows, persistently improving through memory, and executing complex multi-step tasks across browsers, APIs, and local systems.
 
-`myai` is a local-first personal AI agent platform built on DeepAgents with PAI-inspired architecture.
+> 🚀 **v2.0 (The PAI Rebuild)** brings a full rewrite featuring the **Algorithm Engine**, structured **Memory Systems**, dynamic **Hook Lifecycles**, specialized **Agent Personalities**, and **TELOS** goal alignment constraints.
 
-Repository: https://github.com/bharthraj1412/myai
+---
 
-> **v2.0** — Rebuilt from the ground up using [Personal AI Infrastructure](https://github.com/danielmiessler/Personal_AI_Infrastructure) patterns: Algorithm Engine, Memory System, Hook Lifecycle, Agent Personalities, and TELOS goal alignment.
+## ✨ Key Capabilities
 
-## Features
+<details open>
+<summary><b>🧠 Advanced AI Architecture</b></summary>
 
-- ♻️ **Algorithm Engine** - 7-phase task execution (Observe→Think→Plan→Build→Execute→Verify→Learn) with ISC criteria
-- 🧠 **Memory System** - Persistent learning across sessions (WORK, LEARNING, RESEARCH, SIGNALS)
-- 🎣 **Hook System** - 10 event-driven lifecycle hooks (security, rating capture, learning, voice)
-- 🤖 **8 Agent Personalities** - Algorithm, Engineer, Architect, Researcher, Designer, QA, Security, Browser
-- 🧭 **TELOS Life OS** - 10 goal files (Mission, Goals, Projects, Beliefs, Strategies, Models, Learned, Challenges, Ideas, Narratives)
-- 🤖 **Multi-Model Support** - Anthropic, OpenAI, OpenRouter, Kimi, Google Gemini
-- 🔌 **Multi-Channel** - CLI, TUI, Telegram, Discord adapters
-- 🛠️ **Canonical Skill System** - PAI-format SKILL.md with USE WHEN triggers, workflow routing, TitleCase naming
-- 🌐 **Browser Control** - Playwright-based web automation (navigate, screenshot, click, fill)
-- 🔒 **Security** - SecurityValidator hooks, sensitive path protection, HITL approval
-- ⏰ **Scheduler** - Heartbeat checks and cron-based automation
-- 🖥️ **Multi-Node** - Primary + companion device architecture
-- 📊 **Rating System** - Explicit 1-10 rating capture with trend analysis
+- **Algorithm Engine**: Features a rigorous 7-phase execution loop (`Observe → Think → Plan → Build → Execute → Verify → Learn`).
+- **8 Agent Personalities**: Specialized execution contexts including Algorithm, Engineer, Architect, Researcher, Designer, QA, Security, and Browser automation agents.
+- **Dynamic Multi-Model Support**: Easily switch between **Anthropic, OpenAI, OpenRouter, Kimi, Google Gemini**, and custom **NVIDIA APIs** locally.
+- **Memory & Context**: Highly structured persistent file memory routing (`WORK`, `LEARNING`, `RESEARCH`, `SIGNALS`).
 
-## Repo Layout
+</details>
 
-```
-ag3nt/
+<details open>
+<summary><b>🔌 Extensibility & Integration</b></summary>
+
+- **Hook System**: 10 event-driven lifecycle hooks enabling strict security checks, automated learning capture, and voice interfaces.
+- **Canonical Skill System**: Native `SKILL.md` workflows supporting TitleCase naming, `USE WHEN` contextual triggers, and MCP integrations.
+- **TELOS Life OS Integration**: Directly sync your assistant to your life goals (Mission, Goals, Projects, Beliefs, Strategies).
+- **Multi-Node Deployment**: Connect multiple companion devices into the same unified AI brain.
+
+</details>
+
+<details open>
+<summary><b>💻 Interfaces</b></summary>
+
+- **Next.js Web Dashboard** (`apps/ui`): Comprehensive local dashboard for system logs, skill configuration, and state.
+- **JARVIS Interface** (`JARVIS.html`): A stunning, standalone, ultra-low latency connection gateway powered entirely by browser-side caching—complete with multi-provider API configurations, connection aborts, and responsive context streaming.
+- **Interactive Multi-Channel**: Adapters available for CLI, Terminal UI (TUI), Telegram, and Discord integration.
+
+</details>
+
+---
+
+## 🏗️ System Architecture
+
+AG3NT is structured as a robust monorepo:
+
+### Workspace Layout
+```text
+AG3NT/
 ├── apps/
-│   ├── gateway/     # Gateway daemon (HTTP + WS + Hook Manager)
-│   ├── agent/       # Agent worker (DeepAgents + Algorithm Engine)
-│   ├── ui/          # Web dashboard (Next.js + PAI components)
-│   └── tui/         # Terminal UI client
-├── agents/          # 🆕 Agent personality .md files (8 specialists)
-├── hooks/           # 🆕 Event-driven lifecycle hooks (10 hooks)
-│   ├── lib/         #     Shared utilities (hook-io, identity, time, events)
-│   └── handlers/    #     Reusable handler functions
-├── skills/          # Canonical Skills (TitleCase, SKILL.md format)
-├── MEMORY/          # 🆕 Persistent memory system
-│   ├── WORK/        #     Active task tracking (PRD.md files)
-│   ├── LEARNING/    #     Categorized learnings + signals
-│   ├── RESEARCH/    #     Agent output captures
-│   ├── SECURITY/    #     Security audit events
-│   └── STATE/       #     Runtime state (ephemeral)
-├── USER/            # 🆕 Upgrade-safe user customizations
-│   ├── TELOS/       #     10 goal files (Mission, Goals, Projects, etc.)
-│   └── PREFERENCES.md
-├── config/
-│   └── settings.json # 🆕 Single source of truth (PAI-style)
-├── community/       # 370+ community integrations
-└── packages/        # Shared utilities
+│   ├── gateway/     # Core communication daemon (HTTP + WS + Hooks)
+│   ├── agent/       # Python Intelligence Worker (Algorithm Engine & Tool execution)
+│   ├── ui/          # Next.js Web Dashboard interface
+│   └── tui/         # Lightning-fast Terminal UI client
+├── agents/          # Agent personality blueprints (.md)
+├── hooks/           # Extensible middleware hooks for the system lifecycle
+├── skills/          # Community and generated canonical skill libraries
+├── MEMORY/          # Persistent hierarchical memory system storage
+├── USER/            # High-priority user settings (Overrides & TELOS configurations)
+└── config/          # Centralized configuration schema
 ```
 
-## 🖥️ Web Dashboard
+---
 
-The AP3X-UI provides a comprehensive web interface for AG3NT:
+## 🚀 Quick Start Guide
 
-### Running the UI
+We provide an entirely unified setup script for Windows environments that compiles your React apps, scaffolds your Python virtual environments, and installs all dependencies sequentially. 
 
-**Windows (Unified Script - Recommended):**
+### ▶️ 1-Click Environment Boot (Recommended)
 ```powershell
+# Drops you right into the AG3NT UI, Agent Engine, and Gateway simultaneously:
 .\start.ps1
 ```
-This starts Gateway, Agent Worker, and UI together. Access at http://localhost:3000
+Need to cleanly stop everything? Just run `.\stop.ps1`.
 
-**Manual Start:**
-```bash
-# Terminal 1: Start AG3NT Gateway
-cd apps/gateway && npm run dev
+### 🛠️ Manual Bootstrapping
 
-# Terminal 2: Start AG3NT Agent Worker
-cd apps/agent && .venv/Scripts/activate && python -m ag3nt_agent.worker
+If you're running on Linux/macOS or simply prefer isolated control, run the following:
 
-# Terminal 3: Start UI Dashboard
-cd apps/ui && npm run dev
-```
-
-Access the dashboard at http://localhost:3000
-
-### UI Features
-- Real-time chat with streaming
-- Artifact library and management
-- Skills and tools browser
-- Subagent configuration
-- MCP server manager
-- Browser automation interface
-- System monitoring and logs
-
-## JARVIS Upgrade Pack
-
-The repository includes a powerful, standalone multi-provider assistant UI (`JARVIS.html`):
-
-- `JARVIS.html` - Production-grade standalone personal assistant UI (open directly in a browser). Now supports:
-  - **Dynamic Multi-Provider Engine**: NVIDIA (Custom), OpenRouter, Anthropic, OpenAI, and Google Gemini out of the box.
-  - **Seamless Context Switching**: Configurable easy-switch sidebar saving API keys natively to `localStorage`.
-  - **Enhanced Resiliency**: Auto-retries, connection timeout aborts, and responsive streaming.
-Recommended flow:
-
-1. Configure `.env` with your real API keys and endpoint values.
-2. Start the core AG3NT framework with `./start.ps1` (Windows) or your manual service commands.
-3. Open `JARVIS.html` in a browser for the ultimate assistant experience. Provide your endpoints (e.g. `https://integrate.api.nvidia.com/v1`) via the config pane.
-
-
-## Quick Start
-
-### Windows (One Command)
-```powershell
-# Start everything: Gateway + Agent + UI
-.\start.ps1
-
-# Stop all services
-.\stop.ps1
-```
-
-### Manual Setup
-
-#### 1. Copy Configuration
-```bash
-# Create config directory
-mkdir -p ~/.ag3nt
-
-# Copy default config
-cp config/default-config.yaml ~/.ag3nt/config.yaml
-```
-
-#### 2. Start Gateway
+**1. Boot the Application Gateway (Node.js)**
 ```bash
 cd apps/gateway
 pnpm install
 pnpm dev
+# Gateway deployed to http://127.0.0.1:18789
 ```
-Gateway runs on `http://127.0.0.1:18789`
 
-#### 3. Start Agent Worker
+**2. Boot the Agent Engine (Python)**
 ```bash
 cd apps/agent
 python -m venv .venv
 
-# Activate virtual environment
-# Windows:
-.venv\Scripts\activate
-# macOS/Linux:
-source .venv/bin/activate
-
+# Activate (Windows: .venv\Scripts\activate | macOS/Linux: source .venv/bin/activate)
 pip install -r requirements.txt
-python -m ag3nt_agent.worker
-```
-Worker runs on `http://127.0.0.1:18790`
 
-#### 4. Start Web UI
+# Start Uvicorn runtime for the Algorithm Engine
+python -m uvicorn ag3nt_agent.worker:app --port 18790
+# Agent deployed to http://127.0.0.1:18790
+```
+
+**3. Boot the User Interfaces**
+*For the robust Dashboard:*
 ```bash
 cd apps/ui
 npm install
 npm run dev
+# Dashboard live at http://localhost:3000
 ```
-UI runs on `http://localhost:3000`
+*For the ultra-fast JARVIS interface:* Simply double-click `JARVIS.html` in your file explorer!
 
-#### 5. Start TUI (Optional)
-```bash
-cd apps/tui
-pip install -r requirements.txt
-python ag3nt_tui.py
-```
+---
 
-## Milestone Status
+## 🔒 Environment Secrets & Configuration
 
-| Milestone | Status | Description |
-|-----------|--------|-------------|
-| M1: Core Agent Runtime | ✅ Complete | DeepAgents integration, multi-model support |
-| M2: Modular Skill System | ✅ Complete | SKILL.md format, skill discovery, execution runtime, trigger matching |
-| M3: Gateway & Multi-Channel | ✅ Complete | HTTP/WS API, Telegram/Discord adapters |
-| M4: Planning & Memory | ✅ Complete | TodoListMiddleware, memory persistence |
-| M5: Secure Execution | ✅ Complete | HITL approval flow, DM pairing security |
-| M6: Scheduling | ✅ Complete | Heartbeat system, cron jobs |
-| M7: Multi-Node | ✅ Complete | WebSocket protocol, pairing, capability routing |
-| M8: Control Panel | ✅ Complete | Web UI, skill management, debug logs |
+To integrate with foundation models, load your credentials into `.env` (or via the UI configuration panel). 
 
-### Active Development
+| Variable | Description |
+|----------|-------------|
+| `AG3NT_MODEL_PROVIDER` | Defines the default active core processing engine (`openrouter`, `openai`, `anthropic`, `google`) |
+| `AG3NT_MODEL_NAME` | Example fallback defaults depending on provider. |
+| `OPENAI_API_KEY` | Your live OpenAI Key |
+| `OPENROUTER_API_KEY` | Recommended. Provides access to 100+ models. |
+| `AG3NT_CUSTOM_MODEL_URL`| Deploy custom local networks using this parameter (LMStudio / Ollama compatibility). |
 
-See [ROADMAP.md](docs/ROADMAP.md) for detailed sprint planning and current priorities:
-- **Core Tools**: Shell execution, web search, git operations
-- **Skill Execution**: Runtime for skill entrypoints, MCP integration
-- **Testing**: Unit and E2E test coverage
+---
 
-## Documentation
+## 📚 Advanced Documentation
 
-- [Agent Worker](apps/agent/README.md) - Model providers and worker API
-- [Web Dashboard](apps/ui/README.md) - Next.js web interface
-- [TUI Client](apps/tui/README.md) - Terminal interface usage
-- [Gateway API](apps/gateway/API.md) - HTTP/WebSocket API reference
-- [Control Panel](apps/gateway/src/ui/README.md) - Web-based control panel
-- [Multi-Node Architecture](apps/gateway/src/nodes/README.md) - Companion device support
-- [Skills](skills/example-skill/SKILL.md) - Skill format documentation
+To thoroughly explore the engineering capabilities, navigate to our core documentation files:
+- [**The PAI Integration Report**](PAI_INTEGRATION_REPORT.md.resolved) - Rebuild context & decisions
+- [**Agent Architecture**](apps/agent/README.md) - Deep dive into Algorithm mapping
+- [**Developing Hooks**](DEVELOPER_FULL_GUIDE.md) - Writing custom event hooks
+- [**Canonical Skills Framework**](SKILLS_FRAMEWORK.md) - Best practices on triggering workflows
 
-## Environment Variables
+---
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `AG3NT_MODEL_PROVIDER` | LLM provider (anthropic, openai, openrouter, kimi, google) | `openrouter` |
-| `AG3NT_MODEL_NAME` | Model name | `moonshotai/kimi-k2.5` |
-| `ANTHROPIC_API_KEY` | Anthropic API key | - |
-| `OPENAI_API_KEY` | OpenAI API key | - |
-| `OPENROUTER_API_KEY` | OpenRouter API key | - |
-| `KIMI_API_KEY` | Kimi/Moonshot API key | - |
-| `GOOGLE_API_KEY` | Google Gemini API key | - |
-| `AG3NT_CUSTOM_MODEL_URL` | OpenAI-compatible endpoint URL | - |
-| `AG3NT_CUSTOM_MODEL_NAME` | Custom model name for compatible endpoints | - |
-| `AG3NT_CUSTOM_API_KEY` | API key for custom compatible endpoints | - |
-
-## License
-
-MIT
+<div align="center">
+  <p>Built globally as part of the DeepAgents implementation track.</p>
+  <p>Available under the <b>MIT License</b>.</p>
+</div>
